@@ -28,10 +28,17 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
     }
     if (isOpen) {
       loadData()
-      setTeamA(teamAName.split(' & ').filter(n => n && n !== 'Team A'))
-      setTeamB(teamBName.split(' & ').filter(n => n && n !== 'Team B'))
+      const cleanA = teamAName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B')
+      const cleanB = teamBName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B')
+      setTeamA(cleanA)
+      setTeamB(cleanB)
     }
   }, [isOpen, teamAName, teamBName])
+
+  const clearAll = () => {
+    setTeamA([])
+    setTeamB([])
+  }
 
   const createPlayer = async () => {
     if (!newPlayerName.trim()) return
@@ -110,7 +117,12 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-8 flex items-center justify-between">
-              <h2 className="text-3xl font-black text-white tracking-tight">Team Setup</h2>
+              <div>
+                <h2 className="text-3xl font-black text-white tracking-tight">Team Setup</h2>
+                <button onClick={clearAll} className="mt-1 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">
+                  Clear All Teams 🗑️
+                </button>
+              </div>
               <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-500">✕</button>
             </div>
 
