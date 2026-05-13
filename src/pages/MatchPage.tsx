@@ -27,7 +27,8 @@ export function MatchPage() {
   const [pickerOpen, setPickerOpen] = useState<'A' | 'B' | null>(null)
 
   const canUndo = history.length > 0
-  const isGameOver = teamA >= winTarget || teamB >= winTarget
+  const isSkunk = (teamA >= 11 && teamB === 0) || (teamB >= 11 && teamA === 0)
+  const isGameOver = teamA >= winTarget || teamB >= winTarget || isSkunk
 
   // Streak detection
   const getStreak = (team: 'A' | 'B') => {
@@ -138,7 +139,7 @@ export function MatchPage() {
   }
 
   const announceWinner = (winnerName: string, loserName: string, winnerScore: number, loserScore: number) => {
-    const isSkunk = loserScore <= 7
+    const isSkunk = loserScore === 0 && winnerScore >= 11
     
     const skunkPhrases = [
       `A SKUNK? In my backyard? ${loserName}, you're a disgrace! ${winnerScore} to ${loserScore}? Go sit in the truck!`,
@@ -232,10 +233,15 @@ export function MatchPage() {
     ctx.font = '20px monospace'
     ctx.fillText(new Date().toLocaleString(), 600, 580)
 
-    const link = document.createElement('a')
-    link.download = `hole-shot-${teamAName}-vs-${teamBName}.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.download = `hole-shot-${teamAName}-vs-${teamBName}.png`
+      link.href = url
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 100)
+    }, 'image/png')
   }
 
   useEffect(() => {
@@ -476,7 +482,7 @@ export function MatchPage() {
             {teamA >= winTarget ? teamAName : teamBName} WINS!
           </h2>
           <p className="mt-3 text-sm font-black uppercase tracking-[0.3em] text-orange-100/80">
-            {Math.min(teamA, teamB) <= (winTarget / 3) ? 'Absolute Skunkage' : 'Dominance Achieved'}
+            {isSkunk ? 'Absolute Skunkage (11-0)' : 'Dominance Achieved'}
           </p>
           
           <div className="mt-8 flex items-center justify-center gap-4">

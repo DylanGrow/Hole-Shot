@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 export function MatchHistory() {
   const [matches, setMatches] = useState<Match[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editNames, setEditNames] = useState({ a: '', b: '' })
 
   useEffect(() => {
     if (isOpen) {
@@ -30,6 +32,20 @@ export function MatchHistory() {
       await db.matches.clear()
       setMatches([])
     }
+  }
+
+  const startEditing = (match: Match) => {
+    setEditingId(match.id!)
+    setEditNames({ a: match.teamAName, b: match.teamBName })
+  }
+
+  const saveEdit = async (id: number) => {
+    await db.matches.update(id, {
+      teamAName: editNames.a,
+      teamBName: editNames.b
+    })
+    setEditingId(null)
+    loadMatches()
   }
 
   const exportToJSON = () => {
@@ -60,6 +76,79 @@ export function MatchHistory() {
     link.href = url
     link.download = `hole-shot-history-${new Date().toISOString().split('T')[0]}.csv`
     link.click()
+  }
+
+  const exportMatchImage = (match: Match) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1200
+    canvas.height = 630
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Background Gradient
+    const gradient = ctx.createLinearGradient(0, 0, 1200, 630)
+    gradient.addColorStop(0, '#18181b')
+    gradient.addColorStop(1, '#09090b')
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, 1200, 630)
+
+    // Border
+    ctx.strokeStyle = '#f97316'
+    ctx.lineWidth = 20
+    ctx.strokeRect(40, 40, 1120, 550)
+
+    // Title
+    ctx.fillStyle = '#f97316'
+    ctx.font = 'bold 80px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('HOLE SHOT CHAMPIONSHIP', 600, 150)
+
+    // Scores
+    ctx.font = 'bold 40px sans-serif'
+    ctx.fillStyle = '#71717a'
+    ctx.fillText('FINAL SCORE', 600, 220)
+
+    // Team A
+    ctx.font = 'bold 60px sans-serif'
+    ctx.fillStyle = match.winner === 'A' ? '#22c55e' : '#ffffff'
+    ctx.fillText(match.teamAName.toUpperCase(), 350, 350)
+    ctx.font = 'bold 150px sans-serif'
+    ctx.fillText(match.teamAScore.toString(), 350, 500)
+
+    // VS
+    ctx.font = 'bold 40px sans-serif'
+    ctx.fillStyle = '#3f3f46'
+    ctx.fillText('VS', 600, 420)
+
+    // Team B
+    ctx.font = 'bold 60px sans-serif'
+    ctx.fillStyle = match.winner === 'B' ? '#22c55e' : '#ffffff'
+    ctx.fillText(match.teamBName.toUpperCase(), 850, 350)
+    ctx.font = 'bold 150px sans-serif'
+    ctx.fillText(match.teamBScore.toString(), 850, 500)
+
+    // Winner Badge
+    if (match.winner !== 'tie') {
+      ctx.fillStyle = '#22c55e'
+      ctx.font = 'bold 30px sans-serif'
+      const winnerX = match.winner === 'A' ? 350 : 850
+      ctx.fillText('WINNER 🏆', winnerX, 550)
+    }
+
+    // Date
+    ctx.fillStyle = '#52525b'
+    ctx.font = '20px monospace'
+    ctx.fillText(new Date(match.completedAt).toLocaleString(), 600, 580)
+
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.download = `hole-shot-${match.teamAName}-vs-${match.teamBName}.png`
+      link.href = url
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 100)
+    }, 'image/png')
   }
 
   if (!isOpen) {
@@ -157,33 +246,79 @@ export function MatchHistory() {
                     {new Date(match.completedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                   </span>
                   <div className="flex gap-2">
-                    {Math.min(match.teamAScore, match.teamBScore) <= 7 && (
+                    {(match.teamAScore === 0 && match.teamBScore >= 11) || (match.teamBScore === 0 && match.teamAScore >= 11) ? (
                       <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-bold text-purple-400">
-                        🦨 Skunk
+                        🦨 Skunk (11-0)
                       </span>
-                    )}
+                    ) : null}
                     {match.winner !== 'tie' && (
                       <span className="rounded-full bg-orange-500/20 px-3 py-1 text-xs font-bold text-orange-400">
                         {match.winner === 'A' ? match.teamAName : match.teamBName} Won
                       </span>
                     )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); exportMatchImage(match); }}
+                      className="rounded-full bg-white/5 p-1 text-xs hover:bg-white/10 transition-colors"
+                      title="Export as image"
+                    >
+                      📸
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="font-bold">{match.teamAName}</div>
-                    <div className="text-2xl font-black text-orange-400">
-                      {match.teamAScore}
+                {editingId === match.id ? (
+                  <div className="mt-2 space-y-3 rounded-xl bg-white/5 p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="edit-team-a" className="text-[10px] font-bold uppercase text-zinc-500">Team A</label>
+                        <input
+                          id="edit-team-a"
+                          title="Team A Name"
+                          placeholder="Team A Name"
+                          value={editNames.a}
+                          onChange={(e) => setEditNames({ ...editNames, a: e.target.value })}
+                          className="w-full rounded-lg bg-zinc-800 p-2 text-sm text-white"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="edit-team-b" className="text-[10px] font-bold uppercase text-zinc-500">Team B</label>
+                        <input
+                          id="edit-team-b"
+                          title="Team B Name"
+                          placeholder="Team B Name"
+                          value={editNames.b}
+                          onChange={(e) => setEditNames({ ...editNames, b: e.target.value })}
+                          className="w-full rounded-lg bg-zinc-800 p-2 text-sm text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditingId(null)} className="flex-1 rounded-lg bg-zinc-700 py-2 text-xs font-bold">Cancel</button>
+                      <button onClick={() => saveEdit(match.id!)} className="flex-1 rounded-lg bg-green-600 py-2 text-xs font-bold">Save</button>
                     </div>
                   </div>
-                  <div className="px-4 text-2xl font-bold text-zinc-600 italic">vs</div>
-                  <div className="flex-1 text-right">
-                    <div className="font-bold">{match.teamBName}</div>
-                    <div className="text-2xl font-black text-red-400">
-                      {match.teamBScore}
+                ) : (
+                  <div className="flex items-center justify-between" onClick={() => startEditing(match)}>
+                    <div className="flex-1 group cursor-pointer">
+                      <div className="font-bold flex items-center gap-2">
+                        {match.teamAName}
+                        <span className="opacity-0 group-hover:opacity-100 text-[10px] text-zinc-500">✎</span>
+                      </div>
+                      <div className="text-2xl font-black text-orange-400">
+                        {match.teamAScore}
+                      </div>
+                    </div>
+                    <div className="px-4 text-2xl font-bold text-zinc-600 italic">vs</div>
+                    <div className="flex-1 text-right group cursor-pointer">
+                      <div className="font-bold flex items-center justify-end gap-2">
+                        <span className="opacity-0 group-hover:opacity-100 text-[10px] text-zinc-500">✎</span>
+                        {match.teamBName}
+                      </div>
+                      <div className="text-2xl font-black text-red-400">
+                        {match.teamBScore}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </motion.div>
             ))}
           </motion.div>
