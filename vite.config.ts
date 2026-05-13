@@ -40,5 +40,5 @@ export default defineConfig({
       }
     })
   ],
-  base: '/hole-shot/'
+  base: '/Hole-Shot/'
 })

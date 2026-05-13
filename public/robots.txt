@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://psdgr.github.io/hole-shot/sitemap.xml
+Sitemap: https://dylangrow.github.io/Hole-Shot/sitemap.xml
