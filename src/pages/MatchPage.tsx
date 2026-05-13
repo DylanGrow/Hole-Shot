@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Scoreboard } from '../components/scoreboard/Scoreboard'
 import { MatchHistory } from '../components/MatchHistory'
@@ -16,7 +16,7 @@ declare global {
 }
 
 export function MatchPage() {
-  const { teamA, teamB, teamAName, teamBName, history, addPoints, undo, reset, saveMatch, setTeamName } = useMatchStore()
+  const { teamA, teamB, teamAName, teamBName, history, addPoints, adjustScore, undo, reset, saveMatch, setTeamName } = useMatchStore()
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [winTarget, setWinTarget] = useState(21)
@@ -84,6 +84,18 @@ export function MatchPage() {
     const tempName = teamAName
     setTeamName('A', teamBName)
     setTeamName('B', tempName)
+  }
+
+  const handleSwapLastAction = () => {
+    if (history.length === 0) return
+    const last = history[history.length - 1]
+    const otherTeam = last.team === 'A' ? 'B' : 'A'
+    
+    // Undo then add to other team
+    handleUndo()
+    setTimeout(() => {
+      handleAddPoints(otherTeam, last.points)
+    }, 50)
   }
 
   // Keyboard Shortcuts
@@ -244,71 +256,67 @@ export function MatchPage() {
     }, 'image/png')
   }
 
+  const recognitionRef = useRef<any>(null)
+
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) {
-      console.warn('Speech recognition not supported in this browser.')
-      return
-    }
+    if (!SpeechRecognition) return
 
-    let recognition: any = null
-
-    const startRecognition = () => {
-      try {
-        recognition = new SpeechRecognition()
-        recognition.continuous = true
-        recognition.interimResults = true
-        recognition.lang = 'en-US'
-
-        recognition.onresult = (event: any) => {
-          const current = event.resultIndex
-          const result = event.results[current]
-          const text = result[0].transcript.toLowerCase()
-          setTranscript(text)
-
-          if (result.isFinal) {
-            processVoiceCommand(text)
-            // Clear transcript after short delay to show it was processed
-            setTimeout(() => setTranscript(''), 1000)
-          }
-        }
-
-        recognition.onend = () => {
-          if (isListening) {
-            // Add a small delay to avoid rapid restart loops
-            setTimeout(() => {
-              if (isListening) startRecognition()
-            }, 300)
-          }
-        }
-
-        recognition.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error)
-          if (event.error === 'not-allowed') {
-            setIsListening(false)
-            alert('Microphone access denied. Please enable it to use voice input.')
-          }
-        }
-
-        recognition.start()
-      } catch (err) {
-        console.error('Failed to start recognition:', err)
+    const stop = () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null // Prevent restart loop
+        recognitionRef.current.stop()
+        recognitionRef.current = null
       }
     }
 
     if (isListening) {
-      startRecognition()
-    } else {
-      if (recognition) {
-        recognition.stop()
+      const recognition = new SpeechRecognition()
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
+
+      recognition.onresult = (event: any) => {
+        const current = event.resultIndex
+        const result = event.results[current]
+        const text = result[0].transcript.toLowerCase()
+        setTranscript(text)
+
+        if (result.isFinal) {
+          processVoiceCommand(text)
+          setTimeout(() => setTranscript(''), 1000)
+        }
       }
+
+      recognition.onend = () => {
+        // Only restart if we are still supposed to be listening
+        if (isListening) {
+          try {
+            recognition.start()
+          } catch (e) {
+            console.error('Failed to restart recognition:', e)
+          }
+        }
+      }
+
+      recognition.onerror = (event: any) => {
+        if (event.error === 'not-allowed') {
+          setIsListening(false)
+          alert('Microphone access denied.')
+        }
+      }
+
+      recognitionRef.current = recognition
+      try {
+        recognition.start()
+      } catch (e) {
+        console.error('Initial recognition start failed:', e)
+      }
+    } else {
+      stop()
     }
 
-    return () => {
-      if (recognition) {
-        recognition.stop()
-      }
-    }
+    return () => stop()
   }, [isListening, teamAName, teamBName, pointValues])
 
   const processVoiceCommand = (text: string) => {
@@ -548,7 +556,12 @@ export function MatchPage() {
             aria-label={`Change name for ${teamAName}`}
             className="cursor-pointer group relative text-left"
           >
-            <Scoreboard label={teamAName} score={teamA} isWinner={teamA >= winTarget} />
+            <Scoreboard 
+              label={teamAName} 
+              score={teamA} 
+              isWinner={teamA >= winTarget} 
+              onAdjust={(amt) => { audioService.resume(); triggerHaptic(20); adjustScore('A', amt); }}
+            />
             {teamAOnFire && (
               <motion.div 
                 initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -566,7 +579,12 @@ export function MatchPage() {
             aria-label={`Change name for ${teamBName}`}
             className="cursor-pointer group relative text-left"
           >
-            <Scoreboard label={teamBName} score={teamB} isWinner={teamB >= winTarget} />
+            <Scoreboard 
+              label={teamBName} 
+              score={teamB} 
+              isWinner={teamB >= winTarget} 
+              onAdjust={(amt) => { audioService.resume(); triggerHaptic(20); adjustScore('B', amt); }}
+            />
             {teamBOnFire && (
               <motion.div 
                 initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -613,7 +631,7 @@ export function MatchPage() {
           </div>
         </div>
         
-        <div className="flex justify-center my-2">
+        <div className="flex justify-center my-2 gap-4">
            <button 
              onClick={handleSwapTeams}
              disabled={history.length > 0}
@@ -622,7 +640,37 @@ export function MatchPage() {
            >
              <span>Swap Sides 🔄</span>
            </button>
+           
+           {history.length > 0 && (
+             <motion.button
+               initial={{ opacity: 0, scale: 0.9 }}
+               animate={{ opacity: 1, scale: 1 }}
+               onClick={handleSwapLastAction}
+               className="text-[10px] font-bold uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-2"
+               title="Move last point to the other team"
+             >
+               <span>Swap Last Point ⇄</span>
+             </motion.button>
+           )}
         </div>
+
+        {history.length > 0 && (
+          <div className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/5 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Last Action:</span>
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${history[history.length-1].team === 'A' ? 'bg-orange-500' : 'bg-red-500'}`} />
+                <span className="text-sm font-bold text-white">
+                  {history[history.length-1].team === 'A' ? teamAName : teamBName} +{history[history.length-1].points}
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleSwapLastAction} className="rounded-lg bg-white/5 px-3 py-1 text-[10px] font-bold hover:bg-white/10 transition-colors">Swap Team</button>
+              <button onClick={handleUndo} className="rounded-lg bg-orange-500/20 px-3 py-1 text-[10px] font-bold text-orange-400 hover:bg-orange-500/30 transition-colors">Undo</button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-3">
@@ -680,8 +728,9 @@ export function MatchPage() {
         isOpen={!!pickerOpen}
         onClose={() => setPickerOpen(null)}
         is2v2={matchMode === '2v2'}
-        currentName={pickerOpen === 'A' ? teamAName : teamBName}
-        onSelect={(names) => setTeamName(pickerOpen!, names)}
+        teamAName={teamAName}
+        teamBName={teamBName}
+        onSelect={(team, names) => setTeamName(team, names)}
       />
     </main>
   )

@@ -20,6 +20,7 @@ interface MatchState {
   reset: () => void
   saveMatch: () => Promise<void>
   setTeamName: (team: 'A' | 'B', name: string) => void
+  adjustScore: (team: 'A' | 'B', amount: number) => void
 }
 
 const STORAGE_KEY = 'hole-shot-match'
@@ -52,6 +53,26 @@ export const useMatchStore = create<MatchState>()(
               {
                 team,
                 points,
+                teamAScore: newTeamA,
+                teamBScore: newTeamB
+              }
+            ]
+          }
+        }),
+
+      adjustScore: (team, amount) =>
+        set((state) => {
+          let newTeamA = team === 'A' ? Math.max(0, state.teamA + amount) : state.teamA
+          let newTeamB = team === 'B' ? Math.max(0, state.teamB + amount) : state.teamB
+          
+          return {
+            teamA: newTeamA,
+            teamB: newTeamB,
+            history: [
+              ...state.history,
+              {
+                team,
+                points: amount,
                 teamAScore: newTeamA,
                 teamBScore: newTeamB
               }

@@ -4,9 +4,10 @@ interface Props {
   label: string
   score: number
   isWinner?: boolean
+  onAdjust?: (amount: number) => void
 }
 
-export function Scoreboard({ label, score, isWinner }: Props) {
+export function Scoreboard({ label, score, isWinner, onAdjust }: Props) {
   return (
     <motion.div
       layout
@@ -38,17 +39,39 @@ export function Scoreboard({ label, score, isWinner }: Props) {
           )}
         </div>
 
-        <motion.div
-          key={score}
-          initial={{ y: 20, opacity: 0, scale: 0.8 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 15 }}
-          className={`text-center text-9xl font-black tracking-tighter drop-shadow-[0_0_20px_rgba(249,115,22,0.3)] ${
-            isWinner ? 'text-green-500 drop-shadow-[0_0_30px_rgba(34,197,94,0.5)]' : 'text-white'
-          }`}
-        >
-          {score}
-        </motion.div>
+        <div className="flex items-center justify-center gap-6">
+          {onAdjust && !isWinner && (
+            <motion.button
+              whileTap={{ scale: 0.8 }}
+              onClick={(e) => { e.stopPropagation(); onAdjust(-1); }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-2xl font-bold text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              −
+            </motion.button>
+          )}
+          
+          <motion.div
+            key={score}
+            initial={{ y: 20, opacity: 0, scale: 0.8 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            className={`text-center text-9xl font-black tracking-tighter drop-shadow-[0_0_20px_rgba(249,115,22,0.3)] ${
+              isWinner ? 'text-green-500 drop-shadow-[0_0_30px_rgba(34,197,94,0.5)]' : 'text-white'
+            }`}
+          >
+            {score}
+          </motion.div>
+
+          {onAdjust && !isWinner && (
+            <motion.button
+              whileTap={{ scale: 0.8 }}
+              onClick={(e) => { e.stopPropagation(); onAdjust(1); }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-2xl font-bold text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              +
+            </motion.button>
+          )}
+        </div>
       </div>
     </motion.div>
   )

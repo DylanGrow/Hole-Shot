@@ -10,13 +10,22 @@ export interface Match {
   completedAt: Date
 }
 
+export interface Player {
+  id?: number
+  name: string
+  avatar: string
+  createdAt: Date
+}
+
 export class MatchDatabase extends Dexie {
   matches!: Table<Match>
+  players!: Table<Player>
 
   constructor() {
     super('HoleShotDB')
-    this.version(1).stores({
-      matches: '++id, completedAt, winner'
+    this.version(2).stores({
+      matches: '++id, completedAt, winner',
+      players: '++id, &name'
     })
   }
 }
