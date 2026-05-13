@@ -303,31 +303,38 @@ export function MatchPage() {
         recognition.stop()
       }
     }
-  }, [isListening])
+  }, [isListening, teamAName, teamBName, pointValues])
 
   const processVoiceCommand = (text: string) => {
-    const teamAKeywords = ['team a', '\\ba\\b', teamAName.toLowerCase()]
-    const teamBKeywords = ['team b', '\\bb\\b', teamBName.toLowerCase()]
+    const cleanText = text.toLowerCase().trim()
     
-    const points3Keywords = ['three', '3', 'shot', 'hole']
-    const points1Keywords = ['one', '1', 'point']
-
-    let team: 'A' | 'B' | null = null
-    let points: number | null = null
-
-    if (teamAKeywords.some(kw => new RegExp(kw, 'i').test(text))) team = 'A'
-    else if (teamBKeywords.some(kw => new RegExp(kw, 'i').test(text))) team = 'B'
-
-    if (points3Keywords.some(kw => new RegExp(kw, 'i').test(text))) points = 3
-    else if (points1Keywords.some(kw => new RegExp(kw, 'i').test(text))) points = 1
-
-    if (text.includes('undo') || text.includes('go back')) {
-      undo()
+    // Check for Undo
+    if (cleanText.includes('undo') || cleanText.includes('go back') || cleanText.includes('wrong')) {
+      handleUndo()
       return
     }
 
-    if (team && points) {
-      addPoints(team, points)
+    // Determine Team
+    let team: 'A' | 'B' | null = null
+    const nameA = teamAName.toLowerCase()
+    const nameB = teamBName.toLowerCase()
+
+    if (cleanText.includes(nameA) || cleanText.includes('team a') || cleanText.includes(' alpha')) {
+      team = 'A'
+    } else if (cleanText.includes(nameB) || cleanText.includes('team b') || cleanText.includes(' bravo')) {
+      team = 'B'
+    }
+
+    // Determine Points
+    let points: number | null = null
+    if (cleanText.includes('hole') || cleanText.includes('three') || cleanText.includes(' 3')) {
+      points = pointValues.hole
+    } else if (cleanText.includes('board') || cleanText.includes('one') || cleanText.includes(' 1')) {
+      points = pointValues.board
+    }
+
+    if (team && points !== null) {
+      handleAddPoints(team, points)
     }
   }
 
@@ -383,7 +390,7 @@ export function MatchPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setIsListening(!isListening)}
+            onClick={() => { audioService.resume(); setIsListening(!isListening); }}
             aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
             className={`flex items-center gap-2 rounded-2xl px-5 py-3 font-bold transition-all ${
               isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/40' : 'glass text-zinc-300'
