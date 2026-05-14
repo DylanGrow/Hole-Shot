@@ -28,12 +28,13 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
     }
     if (isOpen) {
       loadData()
-      const cleanA = teamAName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B')
-      const cleanB = teamBName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B')
+      const limit = is2v2 ? 2 : 1
+      const cleanA = teamAName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B').slice(0, limit)
+      const cleanB = teamBName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B').slice(0, limit)
       setTeamA(cleanA)
       setTeamB(cleanB)
     }
-  }, [isOpen, teamAName, teamBName])
+  }, [isOpen, teamAName, teamBName, is2v2])
 
   const clearAll = () => {
     setTeamA([])
@@ -118,12 +119,17 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
           >
             <div className="mb-8 flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-black text-white tracking-tight">Team Setup</h2>
-                <button onClick={clearAll} className="mt-1 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">
-                  Clear All Teams 🗑️
-                </button>
+                <h2 className="text-3xl font-black text-white tracking-tight">Select Players</h2>
+                <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mt-1">
+                  {teamA.length + teamB.length} / {is2v2 ? 4 : 2} SELECTED
+                </div>
               </div>
-              <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-500">✕</button>
+              <div className="flex gap-2">
+                <button onClick={clearAll} className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">
+                  Clear All 🗑️
+                </button>
+                <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-500">✕</button>
+              </div>
             </div>
 
             {/* Current Teams View */}
@@ -180,7 +186,13 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
                     className="flex-1 rounded-2xl bg-zinc-900 border border-white/5 px-4 py-3 text-white focus:outline-none focus:border-orange-500"
                     onKeyDown={(e) => e.key === 'Enter' && createPlayer()}
                   />
-                  <button onClick={createPlayer} className="rounded-2xl bg-orange-500 px-6 font-bold text-white">Add</button>
+                  <button 
+                    onClick={createPlayer} 
+                    disabled={(teamA.length + teamB.length) >= (is2v2 ? 4 : 2)}
+                    className="rounded-2xl bg-orange-500 px-6 font-bold text-white disabled:opacity-30 disabled:grayscale transition-all"
+                  >
+                    Add
+                  </button>
                 </div>
               </div>
               

@@ -44,7 +44,8 @@ export const useMatchStore = create<MatchState>()(
 
       addPoints: (team, points) =>
         set((state) => {
-          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget) return state
+          const isSkunk = (state.teamA >= 11 && state.teamB === 0) || (state.teamB >= 11 && state.teamA === 0)
+          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget || isSkunk) return state
 
           let newTeamA = team === 'A' ? state.teamA + points : state.teamA
           let newTeamB = team === 'B' ? state.teamB + points : state.teamB
@@ -70,7 +71,8 @@ export const useMatchStore = create<MatchState>()(
 
       addPointsWithCancellation: (team, points) =>
         set((state) => {
-          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget) return state
+          const isSkunk = (state.teamA >= 11 && state.teamB === 0) || (state.teamB >= 11 && state.teamA === 0)
+          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget || isSkunk) return state
 
           const opponent = team === 'A' ? 'B' : 'A'
           const oppScore = team === 'A' ? state.teamB : state.teamA
@@ -142,9 +144,10 @@ export const useMatchStore = create<MatchState>()(
         const state = get()
         if (state.teamA === 0 && state.teamB === 0) return
 
+        const isSkunk = (state.teamA >= 11 && state.teamB === 0) || (state.teamB >= 11 && state.teamA === 0)
         const winner =
-          state.teamA > state.teamB ? 'A' :
-          state.teamB > state.teamA ? 'B' :
+          state.teamA > state.teamB || (state.teamA >= 11 && state.teamB === 0) ? 'A' :
+          state.teamB > state.teamA || (state.teamB >= 11 && state.teamA === 0) ? 'B' :
           'tie'
 
         await db.matches.add({

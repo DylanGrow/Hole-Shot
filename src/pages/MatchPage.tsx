@@ -79,6 +79,7 @@ export function MatchPage() {
   }
 
   const handleAddPoints = (team: 'A' | 'B', points: number) => {
+    if (isGameOver) return
     // Resume audio context if suspended (browser autoplay policy)
     audioService.resume()
     triggerHaptic()
@@ -359,11 +360,14 @@ export function MatchPage() {
       recognition.onend = () => {
         // Only restart if we are still supposed to be listening
         if (isListening) {
-          try {
-            recognition.start()
-          } catch (e) {
-            console.error('Failed to restart recognition:', e)
-          }
+          // Add a small delay before restarting to prevent rapid-fire crashes
+          setTimeout(() => {
+            try {
+              if (isListening) recognition.start()
+            } catch (e) {
+              console.error('Failed to restart recognition:', e)
+            }
+          }, 250)
         }
       }
 
@@ -388,6 +392,7 @@ export function MatchPage() {
   }, [isListening, teamAName, teamBName, pointValues])
 
   const processVoiceCommand = (text: string) => {
+    if (isGameOver) return
     const clean = text.trim().toLowerCase()
     
     // Voice stop commands (universal/English/Spanish)

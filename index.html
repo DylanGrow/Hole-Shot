@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f97316" />
-    <!-- iOS PWA fullscreen support -->
+    <!-- Modern PWA support -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- iOS PWA fullscreen support (legacy but often still needed for standalone) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hole Shot" />
@@ -60,6 +62,6 @@
       Skip to main content
     </a>
     <div id="root"></div>
-    <script type="module" src="./src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
