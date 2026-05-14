@@ -24,7 +24,19 @@ export const translations = {
     english: 'English',
     saveMatch: 'Save Match',
     undo: 'Undo',
-    seriesOptions: 'Series Options'
+    seriesOptions: 'Series Options',
+    hallOfFameTitle: 'Hall of Fame',
+    allTimeStandings: 'All-Time Standings',
+    noLegendsYet: 'No legends yet. Play a match!',
+    targetScore: 'Target Score',
+    seriesScoreTitle: 'Series Score',
+    matchMomentum: 'Match Momentum',
+    championship: 'Championship',
+    champion: 'CHAMPION',
+    resetBracket: 'Reset Bracket',
+    tournamentTitle: 'Backyard Bracket',
+    semiFinals: 'Semi-Finals & Finals',
+    tournament: 'Tournament'
   },
   es: {
     title: 'TIRO DE AGUJERO',
@@ -51,7 +63,19 @@ export const translations = {
     english: 'Español',
     saveMatch: 'Guardar partida',
     undo: 'Deshacer',
-    seriesOptions: 'Opciones de Serie'
+    seriesOptions: 'Opciones de Serie',
+    hallOfFameTitle: 'Salón de la Fama',
+    allTimeStandings: 'Clasificación Histórica',
+    noLegendsYet: 'Aún no hay leyendas. ¡Juega una partida!',
+    targetScore: 'Objetivo',
+    seriesScoreTitle: 'Puntuación de Serie',
+    matchMomentum: 'Impulso de Partida',
+    championship: 'Campeonato',
+    champion: 'CAMPEÓN',
+    resetBracket: 'Reiniciar Llaves',
+    tournamentTitle: 'Llaves de Patio',
+    semiFinals: 'Semifinales y Finales',
+    tournament: 'Torneo'
   }
 };
 

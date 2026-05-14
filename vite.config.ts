@@ -13,7 +13,7 @@ export default defineConfig({
       includeAssets: ['favicon.png', 'icons/icon-192.png', 'icons/icon-512.png'],
       workbox: {
         // Precache all JS, CSS, HTML, and key image types
-        globPatterns: ['**/*.{js,css,html,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png}'],
       },
       manifest: {
         name: 'Hole Shot - Backyard Glory',

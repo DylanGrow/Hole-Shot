@@ -37,7 +37,7 @@ export function TournamentBracket({ locale }: { locale: Locale }) {
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 rounded-full glass px-6 py-3 font-black text-sm tracking-widest uppercase shadow-lg border-purple-500/20 text-purple-400"
       >
-        Tournament 🏆
+        {t(locale, 'tournament')} 🏆
       </button>
     )
   }
@@ -57,8 +57,8 @@ export function TournamentBracket({ locale }: { locale: Locale }) {
       >
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-black text-white">Backyard Bracket</h2>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Semi-Finals & Finals</p>
+            <h2 className="text-3xl font-black text-white">{t(locale, 'tournamentTitle')}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{t(locale, 'semiFinals')}</p>
           </div>
           <button
             onClick={() => setIsOpen(false)}
@@ -95,7 +95,7 @@ export function TournamentBracket({ locale }: { locale: Locale }) {
           {/* Finals */}
           <div className="w-full max-w-[220px]">
             <div className="text-center mb-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">Championship</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-500">{t(locale, 'championship')}</span>
             </div>
             <div className="space-y-2">
               {[matches[2].team1, matches[2].team2].map(team => (
@@ -117,7 +117,7 @@ export function TournamentBracket({ locale }: { locale: Locale }) {
               >
                 <div className="text-4xl mb-2">👑</div>
                 <div className="text-xl font-black text-white uppercase tracking-tighter">{matches[2].winner}</div>
-                <div className="text-[10px] font-bold text-zinc-500">CHAMPION</div>
+                <div className="text-[10px] font-bold text-zinc-500">{t(locale, 'champion')}</div>
               </motion.div>
             )}
           </div>
@@ -131,7 +131,7 @@ export function TournamentBracket({ locale }: { locale: Locale }) {
           ])}
           className="mt-8 w-full rounded-2xl border border-white/5 py-3 text-xs font-bold text-zinc-500 hover:text-white transition-colors"
         >
-          Reset Bracket
+          {t(locale, 'resetBracket')}
         </button>
       </motion.div>
     </motion.div>

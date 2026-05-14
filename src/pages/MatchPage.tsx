@@ -625,7 +625,7 @@ export function MatchPage() {
           className="rounded-3xl glass p-4 border-white/5"
         >
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Match Momentum</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">{t(locale, 'matchMomentum')}</span>
             <div className="flex gap-4 text-[10px] font-bold">
               <span className="text-orange-500">+{teamAName}</span>
               <span className="text-red-500">+{teamBName}</span>
