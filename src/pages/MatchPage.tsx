@@ -7,12 +7,29 @@ import { PlayerPicker } from '../components/PlayerPicker'
 import { useMatchStore } from '../state/matchStore'
 import { audioService } from '../services/AudioService'
 import { db } from '../db/database'
+import { t, type Locale } from '../i18n'
 
 declare global {
   interface Window {
     webkitSpeechRecognition: any;
     SpeechRecognition: any;
   }
+}
+
+function FloatingPoint({ value, team, onComplete }: { value: number, team: 'A' | 'B', onComplete: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 0, scale: 0.5 }}
+      animate={{ opacity: [0, 1, 1, 0], y: -100, scale: [0.5, 1.2, 1, 1] }}
+      transition={{ duration: 1, times: [0, 0.2, 0.8, 1] }}
+      onAnimationComplete={onComplete}
+      className={`pointer-events-none absolute z-50 text-4xl font-black italic drop-shadow-lg ${
+        team === 'A' ? 'text-orange-500 left-1/4' : 'text-red-500 right-1/4'
+      }`}
+    >
+      +{value}
+    </motion.div>
+  )
 }
 
 export function MatchPage() {
@@ -23,6 +40,17 @@ export function MatchPage() {
   const [seriesRecord, setSeriesRecord] = useState({ winsA: 0, winsB: 0 })
   const [matchMode, setMatchMode] = useState<'1v1' | '2v2'>('1v1')
   const [pointValues, setPointValues] = useState({ hole: 3, board: 1 })
+  const [floatingPoints, setFloatingPoints] = useState<{ id: number, value: number, team: 'A' | 'B' }[]>([])
+  const [isCancellationMode, setIsCancellationMode] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isHighContrast, setIsHighContrast] = useState(false)
+  const [locale, setLocale] = useState<Locale>(
+    (localStorage.getItem('hole_shot_locale') as Locale) ?? 'en'
+  )
+
+  useEffect(() => {
+    localStorage.setItem('hole_shot_locale', locale)
+  }, [locale])
   
   const [pickerOpen, setPickerOpen] = useState<'A' | 'B' | null>(null)
 
@@ -62,7 +90,25 @@ export function MatchPage() {
     audioService.resume()
     triggerHaptic()
     audioService.playScore()
-    addPoints(team, points)
+    
+    // Cancellation scoring: subtract same points from opponent if enabled
+    if (isCancellationMode) {
+      const opponent = team === 'A' ? 'B' : 'A'
+      // Apply net scoring: add to team, subtract from opponent (but not below 0)
+      setFloatingPoints(prev => [...prev, { id: Date.now(), value: points, team }])
+      // Directly adjust match store: add to team and remove from opponent safely
+      addPoints(team, points)
+      // Ensure opponent doesn't go negative
+      const oppScore = team === 'A' ? teamB : teamA
+      if (oppScore > 0) {
+        const deduction = Math.min(points, oppScore)
+        // Use adjustScore to safely subtract points
+        adjustScore(opponent, -deduction)
+      }
+    } else {
+      setFloatingPoints(prev => [...prev, { id: Date.now(), value: points, team }])
+      addPoints(team, points)
+    }
   }
 
   const handleUndo = () => {
@@ -121,6 +167,12 @@ export function MatchPage() {
     setPickerOpen(team)
   }
 
+  const handleResetSeries = () => {
+    if (confirm('Reset the series record?')) {
+      setSeriesRecord({ winsA: 0, winsB: 0 })
+    }
+  }
+
   // Load Series Record
   useEffect(() => {
     const loadSeries = async () => {
@@ -141,9 +193,12 @@ export function MatchPage() {
       setSeriesRecord({ winsA, winsB })
     }
     loadSeries()
-  }, [teamAName, teamBName, history.length === 0]) // Reload when names change or match resets/saves
+  }, [teamAName, teamBName, history.length])
 
   const speak = (text: string) => {
+    if (isMuted) return
+    // Stop any ongoing speech before speaking new phrase
+    window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.rate = 0.9
     utterance.pitch = 0.8
@@ -153,19 +208,33 @@ export function MatchPage() {
   const announceWinner = (winnerName: string, loserName: string, winnerScore: number, loserScore: number) => {
     const isSkunk = loserScore === 0 && winnerScore >= 11
     
-    const skunkPhrases = [
-      `A SKUNK? In my backyard? ${loserName}, you're a disgrace! ${winnerScore} to ${loserScore}? Go sit in the truck!`,
-      `You got skunked, ${loserName}! I've seen better form from a wet noodle. Don't even look at me.`,
-      `${loserName}, you're officially a local legend for all the wrong reasons. Skunked!`
-    ]
+    const skunkPhrases = {
+      en: [
+        `A SKUNK? In my backyard? ${loserName}, you're a disgrace! ${winnerScore} to ${loserScore}? Go sit in the truck!`,
+        `You got skunked, ${loserName}! I've seen better form from a wet noodle. Don't even look at me.`,
+        `${loserName}, you're officially a local legend for all the wrong reasons. Skunked!`
+      ],
+      es: [
+        `¿Un SKUNK? ¿En mi patio? ¡${loserName}, eres una vergüenza! ¿${winnerScore} a ${loserScore}? ¡Vete a sentar al camión!`,
+        `¡Te dieron una paliza, ${loserName}! He visto mejores formas en un fideo mojado. Ni me mires.`,
+        `${loserName}, eres oficialmente una leyenda local por todas las razones equivocadas. ¡Blanqueado!`
+      ]
+    }
 
-    const winPhrases = [
-      `Look at that! ${winnerName} just showed you how it's done. ${loserName}, don't quit your day job!`,
-      `That's a wrap! ${winnerName} takes the glory. ${loserName}, go get me a cold one, you're done!`,
-      `Another win for ${winnerName}. ${loserName}, I'd say good game, but I was taught not to lie.`
-    ]
+    const winPhrases = {
+      en: [
+        `Look at that! ${winnerName} just showed you how it's done. ${loserName}, don't quit your day job!`,
+        `That's a wrap! ${winnerName} takes the glory. ${loserName}, go get me a cold one, you're done!`,
+        `Another win for ${winnerName}. ${loserName}, I'd say good game, but I was taught not to lie.`
+      ],
+      es: [
+        `¡Mira eso! ${winnerName} acaba de enseñarte cómo se hace. ¡${loserName}, no dejes tu trabajo de día!`,
+        `¡Se acabó! ${winnerName} se lleva la gloria. ¡${loserName}, ve a buscarme una fría, terminaste!`,
+        `Otra victoria para ${winnerName}. ${loserName}, diría que fue un buen juego, pero me enseñaron a no mentir.`
+      ]
+    }
 
-    const phrases = isSkunk ? skunkPhrases : winPhrases
+    const phrases = isSkunk ? skunkPhrases[locale] : winPhrases[locale]
     const phrase = phrases[Math.floor(Math.random() * phrases.length)]
     speak(phrase)
   }
@@ -237,7 +306,7 @@ export function MatchPage() {
       ctx.fillStyle = '#22c55e'
       ctx.font = 'bold 30px sans-serif'
       const winnerX = teamA >= winTarget ? 350 : 850
-      ctx.fillText('WINNER 🏆', winnerX, 550)
+      ctx.fillText('🏆 WINNER 🏆', winnerX, 550)
     }
 
     // Date
@@ -320,10 +389,15 @@ export function MatchPage() {
   }, [isListening, teamAName, teamBName, pointValues])
 
   const processVoiceCommand = (text: string) => {
-    const cleanText = text.toLowerCase().trim()
+    const clean = text.trim().toLowerCase()
+    // Voice stop commands
+    if (clean === 'stop' || clean === 'shut up' || clean === 'quiet') {
+      window.speechSynthesis.cancel()
+      return
+    }
     
     // Check for Undo
-    if (cleanText.includes('undo') || cleanText.includes('go back') || cleanText.includes('wrong')) {
+    if (clean.includes('undo') || clean.includes('go back') || clean.includes('wrong')) {
       handleUndo()
       return
     }
@@ -333,17 +407,17 @@ export function MatchPage() {
     const nameA = teamAName.toLowerCase()
     const nameB = teamBName.toLowerCase()
 
-    if (cleanText.includes(nameA) || cleanText.includes('team a') || cleanText.includes(' alpha')) {
+    if (clean.includes(nameA) || clean.includes('team a') || clean.includes(' alpha')) {
       team = 'A'
-    } else if (cleanText.includes(nameB) || cleanText.includes('team b') || cleanText.includes(' bravo')) {
+    } else if (clean.includes(nameB) || clean.includes('team b') || clean.includes(' bravo')) {
       team = 'B'
     }
 
     // Determine Points
     let points: number | null = null
-    if (cleanText.includes('hole') || cleanText.includes('three') || cleanText.includes(' 3')) {
+    if (clean.includes('hole') || clean.includes('three') || clean.includes(' 3')) {
       points = pointValues.hole
-    } else if (cleanText.includes('board') || cleanText.includes('one') || cleanText.includes(' 1')) {
+    } else if (clean.includes('board') || clean.includes('one') || clean.includes(' 1')) {
       points = pointValues.board
     }
 
@@ -395,12 +469,19 @@ export function MatchPage() {
               </div>
             </div>
             <p className="text-sm font-medium uppercase tracking-[0.3em] text-zinc-500">
-              Backyard Glory
+              {t(locale, 'subtitle')}
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setLocale(locale === 'en' ? 'es' : 'en')}
+            className="rounded-xl bg-white/5 p-3 text-zinc-400 transition-all hover:bg-white/10"
+            title={t(locale, locale === 'en' ? 'language' : 'english')}
+          >
+            {locale === 'en' ? '🇪🇸' : '🇺🇸'}
+          </button>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -441,10 +522,10 @@ export function MatchPage() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={saveMatch}
-            aria-label="Save current match to history"
+            aria-label={t(locale, 'saveMatch')}
             className="rounded-2xl bg-green-600 px-6 py-3 font-black text-white shadow-lg shadow-green-600/20"
           >
-            Save Match
+            {t(locale, 'saveMatch')}
           </motion.button>
         </div>
       </header>
@@ -460,7 +541,9 @@ export function MatchPage() {
               <div className="absolute inset-0 animate-ping rounded-full bg-orange-500 opacity-75"></div>
               <div className="relative h-3 w-3 rounded-full bg-orange-500"></div>
             </div>
-            <span className="text-sm font-bold uppercase tracking-widest text-orange-400">Uncle is Listening...</span>
+            <span className="text-sm font-bold uppercase tracking-widest text-orange-400">
+              {locale === 'es' ? 'El Tío está escuchando...' : 'Uncle is Listening...'}
+            </span>
           </div>
           
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -487,27 +570,29 @@ export function MatchPage() {
         <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 to-orange-600 p-8 text-center shadow-2xl ring-4 ring-orange-500/20 animate-in zoom-in-95 duration-500">
           <div className="mb-2 text-6xl">🎉</div>
           <h2 className="text-5xl font-black text-white drop-shadow-md">
-            {teamA >= winTarget ? teamAName : teamBName} WINS!
+            {teamA >= winTarget ? teamAName : teamBName} {locale === 'es' ? 'GANA!' : 'WINS!'}
           </h2>
           <p className="mt-3 text-sm font-black uppercase tracking-[0.3em] text-orange-100/80">
-            {isSkunk ? 'Absolute Skunkage (11-0)' : 'Dominance Achieved'}
+            {isSkunk 
+              ? (locale === 'es' ? 'Blanqueada Absoluta (11-0)' : 'Absolute Skunkage (11-0)') 
+              : (locale === 'es' ? 'Dominio Alcanzado' : 'Dominance Achieved')}
           </p>
           
           <div className="mt-8 flex items-center justify-center gap-4">
             <button 
               onClick={exportMatchAsImage}
-              aria-label="Export match results as image"
+              aria-label={locale === 'es' ? 'Exportar victoria' : 'Export win'}
               className="flex items-center gap-2 rounded-full bg-zinc-900 px-8 py-3 font-bold text-white shadow-xl transition-transform active:scale-95"
             >
-              <span>📸</span> Export Win
+              <span>📸</span> {locale === 'es' ? 'Exportar' : 'Export'}
             </button>
 
             <button 
               onClick={handleReset}
-              aria-label="Start a new game"
+              aria-label={locale === 'es' ? 'Nuevo Juego' : 'New Game'}
               className="rounded-full bg-white px-8 py-3 font-bold text-orange-600 shadow-xl transition-transform active:scale-95"
             >
-              New Game
+              {locale === 'es' ? 'Nuevo Juego' : 'New Game'}
             </button>
           </div>
         </div>
@@ -516,7 +601,9 @@ export function MatchPage() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between px-2">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Match Settings</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+              {locale === 'es' ? 'Ajustes de Partida' : 'Match Settings'}
+            </span>
             <div className="flex gap-2 rounded-xl glass p-1 self-start">
               {(['1v1', '2v2'] as const).map(mode => (
                 <button
@@ -532,8 +619,66 @@ export function MatchPage() {
             </div>
           </div>
 
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{t(locale, 'seriesOptions')}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLocale(locale === 'en' ? 'es' : 'en')}
+                className="rounded-xl bg-white/5 p-3 text-zinc-400 transition-all hover:bg-white/10"
+                title={t(locale, locale === 'en' ? 'language' : 'english')}
+              >
+                {locale === 'en' ? '🇪🇸' : '🇺🇸'}
+              </button>
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className={`rounded-xl p-3 transition-all ${isMuted ? 'bg-red-500/10 text-red-500' : 'bg-white/5 text-zinc-400'}`}
+                title={isMuted ? t(locale, 'unmute') : t(locale, 'mute')}
+              >
+                {isMuted ? '🔇' : '🔊'}
+              </button>
+              <button
+                onClick={() => setIsHighContrast(!isHighContrast)}
+                className={`rounded-xl p-3 transition-all ${isHighContrast ? 'bg-orange-500 text-white' : 'bg-white/5 text-zinc-400'}`}
+                title={t(locale, 'sunlight')}
+              >
+                ☀️
+              </button>
+              <button
+                onClick={() => setIsCancellationMode(!isCancellationMode)}
+                className={`rounded-xl p-3 transition-all ${isCancellationMode ? 'bg-purple-500/10 text-purple-500' : 'bg-white/5 text-zinc-400'}`}
+                title={t(locale, 'cancellation')}
+              >
+                {isCancellationMode ? '⚖️ ON' : '⚖️ OFF'}
+              </button>
+              <button 
+                onClick={handleReset}
+                className="rounded-xl bg-red-500/10 p-3 text-red-500 transition-all hover:bg-red-500 hover:text-white"
+                title={t(locale, 'reset')}
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1 items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{t(locale, 'seriesScore')}</span>
+            <div className="flex items-center gap-6 rounded-2xl glass px-4 py-2">
+              <div className="flex gap-1.5">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className={`h-2.5 w-2.5 rounded-full ${i < seriesRecord.winsA ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]' : 'bg-zinc-800'}`} />
+                ))}
+              </div>
+              <div className="text-xs font-black text-white px-2 border-x border-white/10">VS</div>
+              <div className="flex gap-1.5">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className={`h-2.5 w-2.5 rounded-full ${i < seriesRecord.winsB ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-zinc-800'}`} />
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-1 items-end">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Target</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{t(locale, 'target')}</span>
             <div className="flex gap-2 rounded-xl glass p-1">
               {[11, 15, 21].map(target => (
                 <button
@@ -721,17 +866,26 @@ export function MatchPage() {
         </div>
       </section>
 
-      <MatchHistory />
-      <PlayerLeaderboard />
+      <MatchHistory locale={locale} />
+      <PlayerLeaderboard locale={locale} />
 
-      <PlayerPicker
-        isOpen={!!pickerOpen}
-        onClose={() => setPickerOpen(null)}
-        is2v2={matchMode === '2v2'}
-        teamAName={teamAName}
-        teamBName={teamBName}
-        onSelect={(team, names) => setTeamName(team, names)}
-      />
-    </main>
-  )
-}
+        <PlayerPicker
+          isOpen={!!pickerOpen}
+          onClose={() => setPickerOpen(null)}
+          is2v2={matchMode === '2v2'}
+          teamAName={teamAName}
+          teamBName={teamBName}
+          onSelect={(team, names) => setTeamName(team, names)}
+        />
+
+        {floatingPoints.map(fp => (
+          <FloatingPoint 
+            key={fp.id} 
+            value={fp.value} 
+            team={fp.team} 
+            onComplete={() => setFloatingPoints(prev => prev.filter(p => p.id !== fp.id))} 
+          />
+        ))}
+      </main>
+    )
+  }

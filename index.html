@@ -4,28 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f97316" />
+    <!-- iOS PWA fullscreen support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hole Shot" />
+
+    <!-- SEO -->
     <meta name="description" content="Hole Shot - The ultimate backyard game scoring app. Voice input, match history, and all-time player stats for Cornhole, Horseshoes, and more." />
     <meta name="keywords" content="cornhole scorer, backyard game app, horseshoes score, voice controlled scoring, hole shot app" />
     <link rel="canonical" href="https://dylangrow.github.io/Hole-Shot/" />
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://dylangrow.github.io/Hole-Shot/" />
     <meta property="og:title" content="Hole Shot | Ultimate Backyard Scoring" />
     <meta property="og:description" content="The ultimate backyard game scoring app with voice input and player stats." />
-    <meta property="og:image" content="https://dylangrow.github.io/Hole-Shot/og-image.png" />
+    <meta property="og:image" content="https://dylangrow.github.io/Hole-Shot/icons/icon-512.png" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://dylangrow.github.io/Hole-Shot/" />
     <meta property="twitter:title" content="Hole Shot | Ultimate Backyard Scoring" />
     <meta property="twitter:description" content="The ultimate backyard game scoring app with voice input and player stats." />
-    <meta property="twitter:image" content="https://dylangrow.github.io/Hole-Shot/og-image.png" />
+    <meta property="twitter:image" content="https://dylangrow.github.io/Hole-Shot/icons/icon-512.png" />
 
     <!-- Favicon Suite -->
-    <link rel="icon" type="image/png" href="./favicon.png" />
-    <link rel="apple-touch-icon" href="./icons/icon-192.png">
-    
+    <!-- Inline SVG favicon – zero network request, 100% crisp at all sizes -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f97316'/><circle cx='50' cy='50' r='22' fill='%2309090b'/><circle cx='50' cy='50' r='10' fill='%23f97316'/></svg>" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
       {
@@ -34,11 +41,6 @@
         "name": "Hole Shot",
         "operatingSystem": "Web",
         "applicationCategory": "SportsApplication",
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "5",
-          "ratingCount": "100"
-        },
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -50,6 +52,13 @@
     <title>Hole Shot | Ultimate Backyard Scoring</title>
   </head>
   <body class="bg-[#09090b] text-zinc-100 overflow-x-hidden selection:bg-orange-500/30">
+    <!-- Skip to content for keyboard/screen-reader users -->
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-xl focus:bg-orange-500 focus:px-4 focus:py-2 focus:font-bold focus:text-white"
+    >
+      Skip to main content
+    </a>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx"></script>
   </body>

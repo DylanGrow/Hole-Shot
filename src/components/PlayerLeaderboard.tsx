@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { db } from '../db/database'
 import { motion } from 'framer-motion'
+import { t, Locale } from '../i18n'
 
 interface PlayerStats {
   name: string
   wins: number
   points: number
   matches: number
+  avatar?: string
+  streak: number
 }
 
-export function PlayerLeaderboard() {
+export function PlayerLeaderboard({ locale }: { locale: Locale }) {
   const [stats, setStats] = useState<PlayerStats[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
@@ -19,18 +22,33 @@ export function PlayerLeaderboard() {
 
   const calculateStats = async () => {
     const matches = await db.matches.toArray()
+    const allPlayers = await db.players.toArray()
     const playerMap: Record<string, PlayerStats> = {}
 
     matches.forEach(m => {
-      [m.teamAName, m.teamBName].forEach((name, i) => {
+      const teamANames = m.teamAName.split(' & ')
+      const teamBNames = m.teamBName.split(' & ')
+      const winners = (m.winner === 'A' ? m.teamAName : m.teamBName).split(' & ')
+
+      const allNames = [...teamANames, ...teamBNames]
+      allNames.forEach(nameStr => {
+        const name = nameStr.trim()
         if (!playerMap[name]) {
-          playerMap[name] = { name, wins: 0, points: 0, matches: 0 }
+          const profile = allPlayers.find(p => p.name === name)
+          playerMap[name] = { name, wins: 0, points: 0, matches: 0, avatar: profile?.avatar, streak: 0 }
         }
-        playerMap[name].matches++
-        playerMap[name].points += i === 0 ? m.teamAScore : m.teamBScore
         
-        const winnerName = m.winner === 'A' ? m.teamAName : m.teamBName
-        if (winnerName === name) playerMap[name].wins++
+        const stats = playerMap[name]
+        stats.matches++
+        const isTeamA = teamANames.includes(name)
+        stats.points += isTeamA ? m.teamAScore : m.teamBScore
+        
+        if (winners.includes(name)) {
+          stats.wins++
+          stats.streak++
+        } else {
+          stats.streak = 0 // Reset streak on loss
+        }
       })
     })
 
@@ -42,10 +60,10 @@ export function PlayerLeaderboard() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        aria-label="View Hall of Fame and player statistics"
+        aria-label={t(locale, 'hallOfFame')}
         className="fixed bottom-4 left-4 rounded-full glass px-6 py-3 font-black text-sm tracking-widest uppercase shadow-lg border-orange-500/20 text-orange-400"
       >
-        Hall of Fame 🏆
+        {t(locale, 'hallOfFame')} 🏆
       </button>
     )
   }
@@ -65,8 +83,8 @@ export function PlayerLeaderboard() {
       >
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-black text-white">Hall of Fame</h2>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">All-Time Standings</p>
+            <h2 className="text-3xl font-black text-white">{t(locale, 'hallOfFame')}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{t(locale, 'allTime')}</p>
           </div>
           <button
             onClick={() => setIsOpen(false)}
@@ -79,25 +97,27 @@ export function PlayerLeaderboard() {
 
         <div className="space-y-4 overflow-y-auto pr-2 max-h-[calc(80vh-180px)]">
           {stats.length === 0 ? (
-            <p className="py-12 text-center text-zinc-500 italic">No legends yet. Play a match!</p>
-          ) : (
-            stats.map((player, i) => (
+            <p className="py-12 text-center text-zinc-500 italic">{t(locale, 'noLegends')}</p>
+          ) : (stats.map((player, i) => (
               <div
                 key={player.name}
                 className="group flex items-center justify-between rounded-3xl bg-white/5 p-4 transition-all hover:bg-white/10"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl font-black ${
-                    i === 0 ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' :
-                    i === 1 ? 'bg-zinc-300 text-black' :
-                    i === 2 ? 'bg-orange-600 text-white' : 'bg-zinc-800 text-zinc-500'
+                  <div className={`relative flex h-12 w-12 items-center justify-center rounded-2xl text-2xl font-black ${
+                    i === 0 ? 'bg-yellow-500/10 border border-yellow-500/50 shadow-lg shadow-yellow-500/10' : 'bg-zinc-800'
                   }`}>
-                    {i + 1}
+                    {player.avatar || '👤'}
+                    {i < 3 && (
+                      <span className="absolute -right-1 -top-1 text-sm">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <div className="font-black text-white">{player.name}</div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                      {player.matches} Matches
+                      {player.matches} Matches · {((player.wins / player.matches) * 100).toFixed(0)}% Win
                     </div>
                   </div>
                 </div>

@@ -94,8 +94,8 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
 
   const filteredPlayers = allPlayers.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) && 
-    !teamA.includes(p.name) && 
-    !teamB.includes(p.name)
+    !teamA.map(n => n.toLowerCase()).includes(p.name.toLowerCase()) && 
+    !teamB.map(n => n.toLowerCase()).includes(p.name.toLowerCase())
   )
 
   return (

@@ -9,29 +9,40 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      // Only include assets that actually exist in /public
+      includeAssets: ['favicon.png', 'icons/icon-192.png', 'icons/icon-512.png'],
+      workbox: {
+        // Precache all JS, CSS, HTML, and key image types
+        globPatterns: ['**/*.{js,css,html,png,svg}'],
+      },
       manifest: {
         name: 'Hole Shot - Backyard Glory',
-        short_name: 'HoleShot',
-        description: 'The ultimate backyard game scoring app with voice input.',
+        short_name: 'Hole Shot',
+        description: 'The ultimate backyard game scoring app with voice input, match history, and all-time player stats.',
         theme_color: '#f97316',
         background_color: '#09090b',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        // Must match the GitHub Pages base path exactly
+        start_url: '/Hole-Shot/',
+        scope: '/Hole-Shot/',
+        lang: 'en',
+        categories: ['sports', 'games'],
         icons: [
           {
-            src: '/icons/icon-192.png',
+            src: '/Hole-Shot/icons/icon-192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: '/icons/icon-512.png',
+            src: '/Hole-Shot/icons/icon-512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: '/icons/icon-512.png',
+            src: '/Hole-Shot/icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
@@ -40,5 +51,19 @@ export default defineConfig({
       }
     })
   ],
-  base: '/Hole-Shot/'
+  base: '/Hole-Shot/',
+  build: {
+    // Target modern browsers for smaller output
+    target: 'es2020',
+    // Optimize chunk splitting for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          motion: ['framer-motion'],
+          db: ['dexie']
+        }
+      }
+    }
+  }
 })

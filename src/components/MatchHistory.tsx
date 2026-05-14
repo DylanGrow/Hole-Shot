@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { db, Match } from '../db/database'
 import { motion } from 'framer-motion'
+import { t, Locale } from '../i18n'
 
-export function MatchHistory() {
+export function MatchHistory({ locale }: { locale: Locale }) {
   const [matches, setMatches] = useState<Match[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
