@@ -54,60 +54,12 @@ export const translations = {
     seriesOptions: 'Opciones de Serie'
   }
 };
-  en: {
-    title: 'HOLE SHOT',
-    subtitle: 'Backyard Pro v2.0',
-    reset: 'Reset Match',
-    mute: 'Mute',
-    unmute: 'Unmute',
-    sunlight: 'Sunlight Mode',
-    cancellation: 'Cancellation Scoring',
-    seriesMode: 'Series Mode',
-    newSeries: 'New Series',
-    seriesScore: 'Series Score',
-    target: 'Target',
-    addPoints: 'Add {points} points to {team}',
-    edit: 'Edit',
-    hallOfFame: 'Hall of Fame',
-    allTime: 'All-Time Standings',
-    noLegends: 'No legends yet. Play a match!',
-    matches: 'Matches',
-    win: 'Wins',
-    points: 'Total Pts',
-    winStreak: 'Win Streak',
-    language: 'Español',
-    english: 'English'
-  },
-  es: {
-    title: 'TIRO DE AGUJERO',
-    subtitle: 'Pro del patio v2.0',
-    reset: 'Reiniciar partida',
-    mute: 'Silenciar',
-    unmute: 'Activar sonido',
-    sunlight: 'Modo sol',
-    cancellation: 'Puntuación de cancelación',
-    seriesMode: 'Modo Serie',
-    newSeries: 'Nueva Serie',
-    seriesScore: 'Puntuación de Serie',
-    target: 'Objetivo',
-    addPoints: 'Agregar {points} puntos a {team}',
-    edit: 'Editar',
-    hallOfFame: 'Salón de la Fama',
-    allTime: 'Clasificación de Todos los Tiempos',
-    noLegends: 'Aún no hay leyendas. ¡Juega una partida!',
-    matches: 'Partidos',
-    win: 'Victorias',
-    points: 'Puntos Totales',
-    winStreak: 'Racha de Victorias',
-    language: 'English',
-    english: 'Español'
-  }
-};
 
 export type Locale = keyof typeof translations;
 
 export const t = (locale: Locale, key: string, vars?: Record<string, string | number>) => {
-  const txt = translations[locale][key] ?? key;
+  const dict = translations[locale] as Record<string, string>;
+  const txt = dict[key] ?? key;
   if (!vars) return txt;
   return Object.entries(vars).reduce((acc, [k, v]) => acc.replace(`{${k}}`, String(v)), txt);
 };

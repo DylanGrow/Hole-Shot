@@ -4,6 +4,7 @@ import { Scoreboard } from '../components/scoreboard/Scoreboard'
 import { MatchHistory } from '../components/MatchHistory'
 import { PlayerLeaderboard } from '../components/PlayerLeaderboard'
 import { PlayerPicker } from '../components/PlayerPicker'
+import { TournamentBracket } from '../components/TournamentBracket'
 import { useMatchStore } from '../state/matchStore'
 import { audioService } from '../services/AudioService'
 import { db } from '../db/database'
@@ -33,10 +34,9 @@ function FloatingPoint({ value, team, onComplete }: { value: number, team: 'A' |
 }
 
 export function MatchPage() {
-  const { teamA, teamB, teamAName, teamBName, history, addPoints, adjustScore, undo, reset, saveMatch, setTeamName } = useMatchStore()
+  const { teamA, teamB, teamAName, teamBName, history, addPoints, adjustScore, addPointsWithCancellation, undo, reset, saveMatch, setTeamName, winTarget, setWinTarget, locale, setLocale } = useMatchStore()
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState('')
-  const [winTarget, setWinTarget] = useState(21)
   const [seriesRecord, setSeriesRecord] = useState({ winsA: 0, winsB: 0 })
   const [matchMode, setMatchMode] = useState<'1v1' | '2v2'>('1v1')
   const [pointValues, setPointValues] = useState({ hole: 3, board: 1 })
@@ -44,13 +44,6 @@ export function MatchPage() {
   const [isCancellationMode, setIsCancellationMode] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isHighContrast, setIsHighContrast] = useState(false)
-  const [locale, setLocale] = useState<Locale>(
-    (localStorage.getItem('hole_shot_locale') as Locale) ?? 'en'
-  )
-
-  useEffect(() => {
-    localStorage.setItem('hole_shot_locale', locale)
-  }, [locale])
   
   const [pickerOpen, setPickerOpen] = useState<'A' | 'B' | null>(null)
 
@@ -91,22 +84,13 @@ export function MatchPage() {
     triggerHaptic()
     audioService.playScore()
     
-    // Cancellation scoring: subtract same points from opponent if enabled
+    // Add floating feedback
+    setFloatingPoints(prev => [...prev, { id: Date.now(), value: points, team }])
+
+    // Update state
     if (isCancellationMode) {
-      const opponent = team === 'A' ? 'B' : 'A'
-      // Apply net scoring: add to team, subtract from opponent (but not below 0)
-      setFloatingPoints(prev => [...prev, { id: Date.now(), value: points, team }])
-      // Directly adjust match store: add to team and remove from opponent safely
-      addPoints(team, points)
-      // Ensure opponent doesn't go negative
-      const oppScore = team === 'A' ? teamB : teamA
-      if (oppScore > 0) {
-        const deduction = Math.min(points, oppScore)
-        // Use adjustScore to safely subtract points
-        adjustScore(opponent, -deduction)
-      }
+      addPointsWithCancellation(team, points)
     } else {
-      setFloatingPoints(prev => [...prev, { id: Date.now(), value: points, team }])
       addPoints(team, points)
     }
   }
@@ -252,6 +236,21 @@ export function MatchPage() {
     }
   }, [isGameOver])
 
+  // Momentum Chart Logic
+  const getMomentumData = () => {
+    if (history.length === 0) return [0]
+    return [0, ...history.map(entry => entry.teamAScore - entry.teamBScore)]
+  }
+
+  const momentum = getMomentumData()
+
+  // Cleanup speech on unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel()
+    }
+  }, [])
+
   const exportMatchAsImage = () => {
     const canvas = document.createElement('canvas')
     canvas.width = 1200
@@ -343,7 +342,7 @@ export function MatchPage() {
       const recognition = new SpeechRecognition()
       recognition.continuous = true
       recognition.interimResults = true
-      recognition.lang = 'en-US'
+      recognition.lang = locale === 'en' ? 'en-US' : 'es-ES'
 
       recognition.onresult = (event: any) => {
         const current = event.resultIndex
@@ -390,34 +389,47 @@ export function MatchPage() {
 
   const processVoiceCommand = (text: string) => {
     const clean = text.trim().toLowerCase()
-    // Voice stop commands
-    if (clean === 'stop' || clean === 'shut up' || clean === 'quiet') {
+    
+    // Voice stop commands (universal/English/Spanish)
+    if (['stop', 'shut up', 'quiet', 'para', 'silencio', 'cállate'].some(cmd => clean.includes(cmd))) {
       window.speechSynthesis.cancel()
       return
     }
     
     // Check for Undo
-    if (clean.includes('undo') || clean.includes('go back') || clean.includes('wrong')) {
+    if (['undo', 'go back', 'wrong', 'deshacer', 'atrás', 'error', 'mal'].some(cmd => clean.includes(cmd))) {
       handleUndo()
       return
     }
 
-    // Determine Team
+    // Check for Reset
+    if (['reset', 'new game', 'start over', 'reiniciar', 'nuevo juego', 'empezar'].some(cmd => clean.includes(cmd))) {
+      handleReset()
+      return
+    }
+
+    // Determine Team using Regex (word boundaries to avoid partial matches)
     let team: 'A' | 'B' | null = null
     const nameA = teamAName.toLowerCase()
     const nameB = teamBName.toLowerCase()
 
-    if (clean.includes(nameA) || clean.includes('team a') || clean.includes(' alpha')) {
+    const regexA = new RegExp(`\\b(${nameA}|team a|alpha|equipo a|primero)\\b`, 'i')
+    const regexB = new RegExp(`\\b(${nameB}|team b|bravo|equipo b|segundo)\\b`, 'i')
+
+    if (regexA.test(clean)) {
       team = 'A'
-    } else if (clean.includes(nameB) || clean.includes('team b') || clean.includes(' bravo')) {
+    } else if (regexB.test(clean)) {
       team = 'B'
     }
 
     // Determine Points
     let points: number | null = null
-    if (clean.includes('hole') || clean.includes('three') || clean.includes(' 3')) {
+    const holeKeywords = ['hole', 'three', ' 3', 'hoyo', 'tres']
+    const boardKeywords = ['board', 'one', ' 1', 'tablero', 'madera', 'uno']
+
+    if (holeKeywords.some(kw => clean.includes(kw))) {
       points = pointValues.hole
-    } else if (clean.includes('board') || clean.includes('one') || clean.includes(' 1')) {
+    } else if (boardKeywords.some(kw => clean.includes(kw))) {
       points = pointValues.board
     }
 
@@ -481,6 +493,13 @@ export function MatchPage() {
             title={t(locale, locale === 'en' ? 'language' : 'english')}
           >
             {locale === 'en' ? '🇪🇸' : '🇺🇸'}
+          </button>
+          <button
+            onClick={() => window.speechSynthesis.cancel()}
+            className="rounded-xl bg-white/5 p-3 text-zinc-400 transition-all hover:bg-white/10"
+            title={locale === 'en' ? 'Shut up Uncle' : 'Cállate Tío'}
+          >
+            🤐
           </button>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -578,7 +597,7 @@ export function MatchPage() {
               : (locale === 'es' ? 'Dominio Alcanzado' : 'Dominance Achieved')}
           </p>
           
-          <div className="mt-8 flex items-center justify-center gap-4">
+        <div className="mt-8 flex items-center justify-center gap-4">
             <button 
               onClick={exportMatchAsImage}
               aria-label={locale === 'es' ? 'Exportar victoria' : 'Export win'}
@@ -596,6 +615,54 @@ export function MatchPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Match Momentum Chart */}
+      {history.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl glass p-4 border-white/5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Match Momentum</span>
+            <div className="flex gap-4 text-[10px] font-bold">
+              <span className="text-orange-500">+{teamAName}</span>
+              <span className="text-red-500">+{teamBName}</span>
+            </div>
+          </div>
+          <div className="h-20 w-full overflow-hidden px-2">
+            <svg width="100%" height="100%" viewBox={`0 -25 ${Math.max(100, (momentum.length - 1) * 20)} 50`} preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="momentumGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f97316" />
+                  <stop offset="50%" stopColor="#ffffff" />
+                  <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+              </defs>
+              {/* Zero Line */}
+              <line x1="0" y1="0" x2={(momentum.length - 1) * 20} y2="0" stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="4 4" />
+              {/* Momentum Line */}
+              <motion.polyline
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                fill="none"
+                stroke="url(#momentumGradient)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={momentum.map((val, i) => `${i * 20},${-val}`).join(' ')}
+              />
+              {/* Current Point Indicator */}
+              <circle 
+                cx={(momentum.length - 1) * 20} 
+                cy={-momentum[momentum.length - 1]} 
+                r="4" 
+                fill={momentum[momentum.length - 1] > 0 ? '#f97316' : momentum[momentum.length - 1] < 0 ? '#ef4444' : '#ffffff'} 
+              />
+            </svg>
+          </div>
+        </motion.div>
       )}
 
       <section className="flex flex-col gap-4">
@@ -868,6 +935,7 @@ export function MatchPage() {
 
       <MatchHistory locale={locale} />
       <PlayerLeaderboard locale={locale} />
+      <TournamentBracket locale={locale} />
 
         <PlayerPicker
           isOpen={!!pickerOpen}

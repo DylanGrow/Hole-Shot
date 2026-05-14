@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { db } from '../db/database'
+import { Locale } from '../i18n'
 
 interface HistoryEntry {
   team: 'A' | 'B'
@@ -21,6 +22,11 @@ interface MatchState {
   saveMatch: () => Promise<void>
   setTeamName: (team: 'A' | 'B', name: string) => void
   adjustScore: (team: 'A' | 'B', amount: number) => void
+  addPointsWithCancellation: (team: 'A' | 'B', points: number) => void
+  winTarget: number
+  setWinTarget: (target: number) => void
+  locale: Locale
+  setLocale: (locale: Locale) => void
 }
 
 const STORAGE_KEY = 'hole-shot-match'
@@ -33,18 +39,54 @@ export const useMatchStore = create<MatchState>()(
       teamAName: 'Team A',
       teamBName: 'Team B',
       history: [],
+      winTarget: 21,
+      locale: 'en',
 
       addPoints: (team, points) =>
         set((state) => {
-          if (state.teamA >= 21 || state.teamB >= 21) return state
+          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget) return state
 
           let newTeamA = team === 'A' ? state.teamA + points : state.teamA
           let newTeamB = team === 'B' ? state.teamB + points : state.teamB
 
-          // Cap at 21
-          if (newTeamA > 21) newTeamA = 21
-          if (newTeamB > 21) newTeamB = 21
+          // Cap at winTarget
+          if (newTeamA > state.winTarget) newTeamA = state.winTarget
+          if (newTeamB > state.winTarget) newTeamB = state.winTarget
           
+          return {
+            teamA: newTeamA,
+            teamB: newTeamB,
+            history: [
+              ...state.history,
+              {
+                team,
+                points,
+                teamAScore: newTeamA,
+                teamBScore: newTeamB
+              }
+            ]
+          }
+        }),
+
+      addPointsWithCancellation: (team, points) =>
+        set((state) => {
+          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget) return state
+
+          const opponent = team === 'A' ? 'B' : 'A'
+          const oppScore = team === 'A' ? state.teamB : state.teamA
+          const deduction = Math.min(points, oppScore)
+
+          let newTeamA = state.teamA
+          let newTeamB = state.teamB
+
+          if (team === 'A') {
+            newTeamA = Math.min(state.winTarget, state.teamA + points)
+            newTeamB = Math.max(0, state.teamB - deduction)
+          } else {
+            newTeamB = Math.min(state.winTarget, state.teamB + points)
+            newTeamA = Math.max(0, state.teamA - deduction)
+          }
+
           return {
             teamA: newTeamA,
             teamB: newTeamB,
@@ -121,7 +163,11 @@ export const useMatchStore = create<MatchState>()(
         set((state) => ({
           teamAName: team === 'A' ? name : state.teamAName,
           teamBName: team === 'B' ? name : state.teamBName
-        }))
+        })),
+
+      setWinTarget: (winTarget) => set({ winTarget }),
+
+      setLocale: (locale) => set({ locale })
     }),
     {
       name: STORAGE_KEY
