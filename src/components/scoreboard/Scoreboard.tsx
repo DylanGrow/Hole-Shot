@@ -13,8 +13,8 @@ export function Scoreboard({ label, score, isWinner, onAdjust }: Props) {
       layout
       whileHover={{ y: -5 }}
       className={`relative overflow-hidden rounded-[32px] border p-8 shadow-2xl transition-all duration-700 ${
-        isWinner 
-          ? 'border-green-500/50 bg-green-500/10 ring-4 ring-green-500/20' 
+        isWinner
+          ? 'border-green-500/50 bg-green-500/10 ring-4 ring-green-500/20'
           : 'glass border-white/5'
       }`}
     >
@@ -29,7 +29,7 @@ export function Scoreboard({ label, score, isWinner, onAdjust }: Props) {
             {label}
           </div>
           {isWinner && (
-            <motion.span 
+            <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1.2 }}
               className="text-xl"
@@ -44,7 +44,8 @@ export function Scoreboard({ label, score, isWinner, onAdjust }: Props) {
             <motion.button
               whileTap={{ scale: 0.8 }}
               onClick={(e) => { e.stopPropagation(); onAdjust(-1); }}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-2xl font-bold text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Remove 1 point"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/20 text-2xl font-bold text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all border border-red-500/30 shadow-lg"
             >
               −
             </motion.button>
@@ -66,7 +67,8 @@ export function Scoreboard({ label, score, isWinner, onAdjust }: Props) {
             <motion.button
               whileTap={{ scale: 0.8 }}
               onClick={(e) => { e.stopPropagation(); onAdjust(1); }}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-2xl font-bold text-zinc-500 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Add 1 point"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20 text-2xl font-bold text-green-400 hover:bg-green-500/30 hover:text-green-300 transition-all border border-green-500/30 shadow-lg"
             >
               +
             </motion.button>

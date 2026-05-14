@@ -29,7 +29,10 @@ export function MatchHistory({ locale }: { locale: Locale }) {
   }
 
   const clearHistory = async () => {
-    if (confirm('Clear all match history?')) {
+    const message = locale === 'es'
+      ? '¿Borrar todo el historial de partidas?'
+      : 'Clear all match history?'
+    if (confirm(message)) {
       await db.matches.clear()
       setMatches([])
     }
@@ -157,9 +160,9 @@ export function MatchHistory({ locale }: { locale: Locale }) {
       <button
         onClick={() => setIsOpen(true)}
         aria-label="View match history"
-        className="fixed bottom-4 right-4 rounded-full bg-orange-500 px-6 py-3 font-bold shadow-lg"
+        className="fixed bottom-4 right-4 z-40 rounded-full bg-orange-500 px-6 py-3 font-bold shadow-lg hover:bg-orange-600 transition-colors"
       >
-        History ({matches.length})
+        📜 History ({matches.length})
       </button>
     )
   }

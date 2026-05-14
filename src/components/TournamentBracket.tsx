@@ -35,9 +35,10 @@ export function TournamentBracket({ locale }: { locale: Locale }) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 rounded-full glass px-6 py-3 font-black text-sm tracking-widest uppercase shadow-lg border-purple-500/20 text-purple-400"
+        aria-label={t(locale, 'tournament')}
+        className="fixed bottom-20 right-4 z-40 rounded-full glass px-6 py-3 font-black text-sm tracking-widest uppercase shadow-lg border-purple-500/20 text-purple-400 hover:bg-purple-500/10 transition-colors"
       >
-        {t(locale, 'tournament')} 🏆
+        🏆 {t(locale, 'tournament')}
       </button>
     )
   }

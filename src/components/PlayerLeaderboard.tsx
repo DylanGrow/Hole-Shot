@@ -61,9 +61,9 @@ export function PlayerLeaderboard({ locale }: { locale: Locale }) {
       <button
         onClick={() => setIsOpen(true)}
         aria-label={t(locale, 'hallOfFame')}
-        className="fixed bottom-4 left-4 rounded-full glass px-6 py-3 font-black text-sm tracking-widest uppercase shadow-lg border-orange-500/20 text-orange-400"
+        className="fixed bottom-4 left-4 z-40 rounded-full glass px-6 py-3 font-black text-sm tracking-widest uppercase shadow-lg border-orange-500/20 text-orange-400 hover:bg-orange-500/10 transition-colors"
       >
-        {t(locale, 'hallOfFame')} 🏆
+        🏆 {t(locale, 'hallOfFame')}
       </button>
     )
   }

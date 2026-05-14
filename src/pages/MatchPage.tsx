@@ -104,7 +104,10 @@ export function MatchPage() {
   }
 
   const handleReset = () => {
-    if (confirm('Are you sure you want to start a new game?')) {
+    const message = locale === 'es'
+      ? '¿Estás seguro de que quieres comenzar un nuevo juego?'
+      : 'Are you sure you want to start a new game?'
+    if (confirm(message)) {
       reset()
       setShowConfetti(false)
     }
@@ -153,7 +156,10 @@ export function MatchPage() {
   }
 
   const handleResetSeries = () => {
-    if (confirm('Reset the series record?')) {
+    const message = locale === 'es'
+      ? '¿Reiniciar el registro de la serie?'
+      : 'Reset the series record?'
+    if (confirm(message)) {
       setSeriesRecord({ winsA: 0, winsB: 0 })
     }
   }
@@ -372,9 +378,22 @@ export function MatchPage() {
       }
 
       recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
         if (event.error === 'not-allowed') {
           setIsListening(false)
-          alert('Microphone access denied.')
+          const message = locale === 'es'
+            ? 'Acceso al micrófono denegado. Por favor, permite el acceso al micrófono en la configuración de tu navegador.'
+            : 'Microphone access denied. Please allow microphone access in your browser settings.'
+          alert(message)
+        } else if (event.error === 'no-speech') {
+          // Silently handle no-speech errors (common and not critical)
+          console.log('No speech detected')
+        } else if (event.error === 'network') {
+          setIsListening(false)
+          const message = locale === 'es'
+            ? 'Error de red. Verifica tu conexión a internet.'
+            : 'Network error. Please check your internet connection.'
+          alert(message)
         }
       }
 
@@ -496,15 +515,9 @@ export function MatchPage() {
             onClick={() => setLocale(locale === 'en' ? 'es' : 'en')}
             className="rounded-xl bg-white/5 p-3 text-zinc-400 transition-all hover:bg-white/10"
             title={t(locale, locale === 'en' ? 'language' : 'english')}
+            aria-label={t(locale, locale === 'en' ? 'language' : 'english')}
           >
-            {locale === 'en' ? '🇪🇸' : '🇺🇸'}
-          </button>
-          <button
-            onClick={() => window.speechSynthesis.cancel()}
-            className="rounded-xl bg-white/5 p-3 text-zinc-400 transition-all hover:bg-white/10"
-            title={locale === 'en' ? 'Shut up Uncle' : 'Cállate Tío'}
-          >
-            🤐
+            {locale === 'en' ? '🇪🇸 ES' : '🇺🇸 EN'}
           </button>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -695,13 +708,6 @@ export function MatchPage() {
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{t(locale, 'seriesOptions')}</span>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setLocale(locale === 'en' ? 'es' : 'en')}
-                className="rounded-xl bg-white/5 p-3 text-zinc-400 transition-all hover:bg-white/10"
-                title={t(locale, locale === 'en' ? 'language' : 'english')}
-              >
-                {locale === 'en' ? '🇪🇸' : '🇺🇸'}
-              </button>
-              <button
                 onClick={() => setIsMuted(!isMuted)}
                 className={`rounded-xl p-3 transition-all ${isMuted ? 'bg-red-500/10 text-red-500' : 'bg-white/5 text-zinc-400'}`}
                 title={isMuted ? t(locale, 'unmute') : t(locale, 'mute')}
@@ -721,13 +727,6 @@ export function MatchPage() {
                 title={t(locale, 'cancellation')}
               >
                 {isCancellationMode ? '⚖️ ON' : '⚖️ OFF'}
-              </button>
-              <button 
-                onClick={handleReset}
-                className="rounded-xl bg-red-500/10 p-3 text-red-500 transition-all hover:bg-red-500 hover:text-white"
-                title={t(locale, 'reset')}
-              >
-                🗑️
               </button>
             </div>
           </div>
