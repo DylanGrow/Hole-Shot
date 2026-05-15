@@ -18,7 +18,7 @@ export default defineConfig({
       manifest: {
         name: 'Hole Shot - Backyard Glory',
         short_name: 'Hole Shot',
-        description: 'The ultimate backyard game scoring app with voice input, match history, and all-time player stats.',
+        description: 'The ultimate backyard cornhole scoring app. Track scores, customize point values, and crown your backyard champion.',
         theme_color: '#f97316',
         background_color: '#09090b',
         display: 'standalone',

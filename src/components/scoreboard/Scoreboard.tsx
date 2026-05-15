@@ -4,15 +4,14 @@ interface Props {
   label: string
   score: number
   isWinner?: boolean
-  onAdjust?: (amount: number) => void
 }
 
-export function Scoreboard({ label, score, isWinner, onAdjust }: Props) {
+export function Scoreboard({ label, score, isWinner }: Props) {
   return (
     <motion.div
       layout
-      whileHover={{ y: -5 }}
-      className={`relative overflow-hidden rounded-[32px] border p-8 shadow-2xl transition-all duration-700 ${
+      whileHover={{ y: -4 }}
+      className={`relative overflow-hidden rounded-[32px] border p-4 sm:p-6 shadow-2xl transition-all duration-700 flex flex-col items-center justify-center ${
         isWinner
           ? 'border-green-500/50 bg-green-500/10 ring-4 ring-green-500/20'
           : 'glass border-white/5'
@@ -23,57 +22,33 @@ export function Scoreboard({ label, score, isWinner, onAdjust }: Props) {
         isWinner ? 'bg-green-500' : 'bg-orange-500'
       }`} />
 
-      <div className="relative z-10">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">
+      <div className="relative z-10 w-full flex flex-col items-center">
+        <div className="mb-2 flex items-center justify-center gap-2 max-w-full px-1">
+          <span className="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-tight text-white drop-shadow-md truncate max-w-[140px] sm:max-w-[180px]">
             {label}
-          </div>
+          </span>
           {isWinner && (
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1.2 }}
-              className="text-xl"
+              className="text-xl flex-shrink-0"
             >
               🏆
             </motion.span>
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-6">
-          {onAdjust && !isWinner && (
-            <motion.button
-              whileTap={{ scale: 0.8 }}
-              onClick={(e) => { e.stopPropagation(); onAdjust(-1); }}
-              aria-label="Remove 1 point"
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/20 text-2xl font-bold text-red-400 hover:bg-red-500/30 hover:text-red-300 transition-all border border-red-500/30 shadow-lg"
-            >
-              −
-            </motion.button>
-          )}
-          
-          <motion.div
-            key={score}
-            initial={{ y: 20, opacity: 0, scale: 0.8 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 15 }}
-            className={`text-center text-9xl font-black tracking-tighter drop-shadow-[0_0_20px_rgba(249,115,22,0.3)] ${
-              isWinner ? 'text-green-500 drop-shadow-[0_0_30px_rgba(34,197,94,0.5)]' : 'text-white'
-            }`}
-          >
-            {score}
-          </motion.div>
-
-          {onAdjust && !isWinner && (
-            <motion.button
-              whileTap={{ scale: 0.8 }}
-              onClick={(e) => { e.stopPropagation(); onAdjust(1); }}
-              aria-label="Add 1 point"
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20 text-2xl font-bold text-green-400 hover:bg-green-500/30 hover:text-green-300 transition-all border border-green-500/30 shadow-lg"
-            >
-              +
-            </motion.button>
-          )}
-        </div>
+        <motion.div
+          key={score}
+          initial={{ y: 15, opacity: 0, scale: 0.8 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          className={`text-center text-8xl sm:text-9xl font-black tracking-tighter drop-shadow-[0_0_20px_rgba(249,115,22,0.3)] ${
+            isWinner ? 'text-green-500 drop-shadow-[0_0_30px_rgba(34,197,94,0.5)]' : 'text-white'
+          }`}
+        >
+          {score}
+        </motion.div>
       </div>
     </motion.div>
   )

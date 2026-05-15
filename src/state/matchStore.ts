@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { db } from '../db/database'
-import { Locale } from '../i18n'
 
 interface HistoryEntry {
   team: 'A' | 'B'
@@ -25,8 +24,6 @@ interface MatchState {
   addPointsWithCancellation: (team: 'A' | 'B', points: number) => void
   winTarget: number
   setWinTarget: (target: number) => void
-  locale: Locale
-  setLocale: (locale: Locale) => void
 }
 
 const STORAGE_KEY = 'hole-shot-match'
@@ -40,19 +37,18 @@ export const useMatchStore = create<MatchState>()(
       teamBName: 'Team B',
       history: [],
       winTarget: 21,
-      locale: 'en',
 
       addPoints: (team, points) =>
         set((state) => {
           const isSkunk = (state.teamA >= 11 && state.teamB === 0) || (state.teamB >= 11 && state.teamA === 0)
-          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget || isSkunk) return state
+          if (state.teamA >= 21 || state.teamB >= 21 || isSkunk) return state
 
           let newTeamA = team === 'A' ? state.teamA + points : state.teamA
           let newTeamB = team === 'B' ? state.teamB + points : state.teamB
 
-          // Cap at winTarget
-          if (newTeamA > state.winTarget) newTeamA = state.winTarget
-          if (newTeamB > state.winTarget) newTeamB = state.winTarget
+          // Cap at 21
+          if (newTeamA > 21) newTeamA = 21
+          if (newTeamB > 21) newTeamB = 21
           
           return {
             teamA: newTeamA,
@@ -72,9 +68,8 @@ export const useMatchStore = create<MatchState>()(
       addPointsWithCancellation: (team, points) =>
         set((state) => {
           const isSkunk = (state.teamA >= 11 && state.teamB === 0) || (state.teamB >= 11 && state.teamA === 0)
-          if (state.teamA >= state.winTarget || state.teamB >= state.winTarget || isSkunk) return state
+          if (state.teamA >= 21 || state.teamB >= 21 || isSkunk) return state
 
-          const opponent = team === 'A' ? 'B' : 'A'
           const oppScore = team === 'A' ? state.teamB : state.teamA
           const deduction = Math.min(points, oppScore)
 
@@ -82,10 +77,10 @@ export const useMatchStore = create<MatchState>()(
           let newTeamB = state.teamB
 
           if (team === 'A') {
-            newTeamA = Math.min(state.winTarget, state.teamA + points)
+            newTeamA = Math.min(21, state.teamA + points)
             newTeamB = Math.max(0, state.teamB - deduction)
           } else {
-            newTeamB = Math.min(state.winTarget, state.teamB + points)
+            newTeamB = Math.min(21, state.teamB + points)
             newTeamA = Math.max(0, state.teamA - deduction)
           }
 
@@ -106,8 +101,8 @@ export const useMatchStore = create<MatchState>()(
 
       adjustScore: (team, amount) =>
         set((state) => {
-          let newTeamA = team === 'A' ? Math.max(0, state.teamA + amount) : state.teamA
-          let newTeamB = team === 'B' ? Math.max(0, state.teamB + amount) : state.teamB
+          let newTeamA = team === 'A' ? Math.min(21, Math.max(0, state.teamA + amount)) : state.teamA
+          let newTeamB = team === 'B' ? Math.min(21, Math.max(0, state.teamB + amount)) : state.teamB
           
           return {
             teamA: newTeamA,
@@ -144,7 +139,6 @@ export const useMatchStore = create<MatchState>()(
         const state = get()
         if (state.teamA === 0 && state.teamB === 0) return
 
-        const isSkunk = (state.teamA >= 11 && state.teamB === 0) || (state.teamB >= 11 && state.teamA === 0)
         const winner =
           state.teamA > state.teamB || (state.teamA >= 11 && state.teamB === 0) ? 'A' :
           state.teamB > state.teamA || (state.teamB >= 11 && state.teamA === 0) ? 'B' :
@@ -168,9 +162,7 @@ export const useMatchStore = create<MatchState>()(
           teamBName: team === 'B' ? name : state.teamBName
         })),
 
-      setWinTarget: (winTarget) => set({ winTarget }),
-
-      setLocale: (locale) => set({ locale })
+      setWinTarget: () => set({ winTarget: 21 })
     }),
     {
       name: STORAGE_KEY
