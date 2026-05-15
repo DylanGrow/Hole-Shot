@@ -174,4 +174,4 @@ For issues, questions, or feature requests, please [open an issue](https://githu
 
 ---
 
-**Made with Bob** 🤖 - Your AI coding assistant
+**Made by Dylan May 2026**

@@ -16,13 +16,13 @@ function FloatingPoint({ value, team, onComplete }: { value: number, team: 'A' |
         team === 'A' ? 'text-orange-500 left-1/4' : 'text-red-500 right-1/4'
       }`}
     >
-      +{value}
+      {value > 0 ? `+${value}` : `${value}`}
     </motion.div>
   )
 }
 
 export function MatchPage() {
-  const { teamA, teamB, teamAName, teamBName, history, addPoints, reset, saveMatch, setTeamName } = useMatchStore()
+  const { teamA, teamB, teamAName, teamBName, history, addPoints, reset, saveMatch, setTeamName, adjustScore } = useMatchStore()
   const [matchMode, setMatchMode] = useState<'1v1' | '2v2'>('1v1')
   const [floatingPoints, setFloatingPoints] = useState<{ id: number, value: number, team: 'A' | 'B' }[]>([])
   const [isMuted, setIsMuted] = useState(false)
@@ -174,19 +174,27 @@ export function MatchPage() {
     }
   }
 
-  const handleAddPoints = (team: 'A' | 'B') => {
+  const handleChangePoints = (team: 'A' | 'B', delta: number) => {
     if (isGameOver) return
     audioService.resume()
     triggerHaptic()
     if (!isMuted) audioService.playScore()
 
-    setFloatingPoints(prev => [...prev, { id: Date.now(), value: 3, team }])
+    // Compute tentative new score, enforce bounds 0-21
+    const currentScore = team === 'A' ? teamA : teamB
+    const tentative = currentScore + delta
+    if (tentative < 0) return // prevent negative scores
+    const clampedScore = Math.min(21, tentative)
 
-    const newA = team === 'A' ? Math.min(21, teamA + 3) : teamA
-    const newB = team === 'B' ? Math.min(21, teamB + 3) : teamB
+    // Show floating point animation (positive or negative)
+    setFloatingPoints(prev => [...prev, { id: Date.now(), value: delta, team }])
 
-    addPoints(team, 3)
-    processSpeechAfterScoreChange(newA, newB, team)
+    adjustScore(team, delta)
+    const newA = team === 'A' ? clampedScore : teamA
+    const newB = team === 'B' ? clampedScore : teamB
+
+    // Only announce when points were added (delta > 0)
+    processSpeechAfterScoreChange(newA, newB, delta > 0 ? team : undefined)
   }
 
   const handleReset = () => {
@@ -222,8 +230,8 @@ export function MatchPage() {
       if (document.activeElement?.tagName === 'INPUT') return
 
       switch(e.key) {
-        case '1': handleAddPoints('A'); break;
-        case '2': handleAddPoints('B'); break;
+        case '1': handleChangePoints('A', 1); break;
+        case '2': handleChangePoints('B', 1); break;
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -493,10 +501,24 @@ export function MatchPage() {
                 🔥
               </motion.div>
             )}
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                onClick={() => handleChangePoints('A', -1)}
+                className="flex-1 rounded-lg bg-white/5 border border-white/10 py-1 text-xs font-bold text-zinc-400 hover:bg-white/10"
+              >
+                -1
+              </button>
+              <button
+                onClick={() => handleChangePoints('A', 1)}
+                className="flex-1 rounded-lg bg-white/5 border border-white/10 py-1 text-xs font-bold text-zinc-400 hover:bg-white/10"
+              >
+                +1
+              </button>
+            </div>
             <button
               onClick={() => handleNameChange('A')}
               aria-label={`Edit ${teamAName}`}
-              className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-orange-500/15 border border-orange-500/30 py-2.5 px-2 text-xs sm:text-sm font-bold text-orange-400 hover:bg-orange-500/25 transition-all shadow-sm"
+              className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl bg-orange-500/15 border border-orange-500/30 py-2 px-2 text-xs font-bold text-orange-400 hover:bg-orange-500/25 transition-all shadow-sm"
             >
               <span>✏️</span>
               <span className="truncate">Edit Team</span>
@@ -516,10 +538,24 @@ export function MatchPage() {
                 🔥
               </motion.div>
             )}
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                onClick={() => handleChangePoints('B', -1)}
+                className="flex-1 rounded-lg bg-white/5 border border-white/10 py-1 text-xs font-bold text-zinc-400 hover:bg-white/10"
+              >
+                -1
+              </button>
+              <button
+                onClick={() => handleChangePoints('B', 1)}
+                className="flex-1 rounded-lg bg-white/5 border border-white/10 py-1 text-xs font-bold text-zinc-400 hover:bg-white/10"
+              >
+                +1
+              </button>
+            </div>
             <button
               onClick={() => handleNameChange('B')}
               aria-label={`Edit ${teamBName}`}
-              className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-red-500/15 border border-red-500/30 py-2.5 px-2 text-xs sm:text-sm font-bold text-red-400 hover:bg-red-500/25 transition-all shadow-sm"
+              className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl bg-red-500/15 border border-red-500/30 py-2 px-2 text-xs font-bold text-red-400 hover:bg-red-500/25 transition-all shadow-sm"
             >
               <span>✏️</span>
               <span className="truncate">Edit Team</span>
@@ -545,7 +581,7 @@ export function MatchPage() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.96 }}
-            onClick={() => handleAddPoints('A')}
+            onClick={() => handleChangePoints('A', 3)}
             disabled={isGameOver}
             aria-label={`Add 3 points to ${teamAName}`}
             className="btn-premium rounded-[32px] bg-gradient-to-b from-orange-500 to-orange-600 py-10 sm:py-12 text-center text-4xl sm:text-5xl font-black text-white shadow-2xl shadow-orange-500/30 border border-orange-400/30 disabled:opacity-50 flex flex-col items-center justify-center gap-1.5 group select-none"
@@ -557,7 +593,7 @@ export function MatchPage() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.96 }}
-            onClick={() => handleAddPoints('B')}
+            onClick={() => handleChangePoints('B', 3)}
             disabled={isGameOver}
             aria-label={`Add 3 points to ${teamBName}`}
             className="btn-premium rounded-[32px] bg-gradient-to-b from-red-600 to-red-700 py-10 sm:py-12 text-center text-4xl sm:text-5xl font-black text-white shadow-2xl shadow-red-600/30 border border-red-500/30 disabled:opacity-50 flex flex-col items-center justify-center gap-1.5 group select-none"
