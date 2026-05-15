@@ -316,7 +316,7 @@ export function MatchPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-5 p-3 pb-20 md:p-6">
+    <main id="main-content" className="mx-auto flex min-h-screen max-w-5xl flex-col gap-5 p-3 pb-20 md:p-6">
       <div className="noise" />
       
       {showConfetti && (
