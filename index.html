@@ -2,40 +2,44 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f97316" />
-    <!-- Modern PWA support -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0c" />
+
+    <!-- PWA -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <!-- iOS PWA fullscreen support (legacy but often still needed for standalone) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hole Shot" />
+    <meta name="application-name" content="Hole Shot" />
+    <meta name="format-detection" content="telephone=no" />
 
     <!-- SEO -->
-    <meta name="description" content="Hole Shot - The ultimate backyard cornhole scoring app. Track scores, customize point values, and crown your backyard champion." />
-    <meta name="keywords" content="cornhole scorer, backyard game app, cornhole score tracker, bean bag toss scoring, hole shot app" />
+    <meta name="description" content="Hole Shot — Free cornhole scoring app. Track scores, detect skunks, voice announcer, and share results. Works offline as a PWA. No ads, no sign-up." />
+    <meta name="keywords" content="cornhole, cornhole scoring app, cornhole scorer, bag toss scorer, hole shot, backyard games, bean bag toss, cornhole tracker, free cornhole app" />
+    <meta name="author" content="Dylan Grow" />
+    <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://dylangrow.github.io/Hole-Shot/" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://dylangrow.github.io/Hole-Shot/" />
-    <meta property="og:title" content="Hole Shot | Ultimate Backyard Scoring" />
-    <meta property="og:description" content="The ultimate backyard cornhole scoring app. Track scores and crown your champion." />
+    <meta property="og:title" content="Hole Shot — Free Cornhole Scoring App" />
+    <meta property="og:description" content="Track cornhole scores, detect skunks, hear voice announcements, and share results. Works offline. Free forever." />
     <meta property="og:image" content="https://dylangrow.github.io/Hole-Shot/icons/icon-512.png" />
+    <meta property="og:site_name" content="Hole Shot" />
+    <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://dylangrow.github.io/Hole-Shot/" />
-    <meta property="twitter:title" content="Hole Shot | Ultimate Backyard Scoring" />
-    <meta property="twitter:description" content="The ultimate backyard cornhole scoring app. Track scores and crown your champion." />
-    <meta property="twitter:image" content="https://dylangrow.github.io/Hole-Shot/icons/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Hole Shot — Free Cornhole Scoring App" />
+    <meta name="twitter:description" content="Track cornhole scores, detect skunks, hear voice announcements, and share results. Works offline." />
+    <meta name="twitter:image" content="https://dylangrow.github.io/Hole-Shot/icons/icon-512.png" />
 
     <!-- Favicon Suite -->
-    <!-- Inline SVG favicon – zero network request, 100% crisp at all sizes -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f97316'/><circle cx='50' cy='50' r='22' fill='%2309090b'/><circle cx='50' cy='50' r='10' fill='%23f97316'/></svg>" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23f97316'/%3E%3Ccircle cx='50' cy='50' r='22' fill='%230a0a0c'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23f97316'/%3E%3C/svg%3E" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
 
-    <!-- JSON-LD Structured Data -->
+    <!-- Structured Data -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -43,25 +47,47 @@
         "name": "Hole Shot",
         "operatingSystem": "Web",
         "applicationCategory": "SportsApplication",
+        "applicationSubCategory": "Scoring",
+        "description": "Free cornhole scoring app with voice announcer, skunk detection, and offline support.",
+        "url": "https://dylangrow.github.io/Hole-Shot/",
+        "author": {
+          "@type": "Person",
+          "name": "Dylan Grow"
+        },
         "offers": {
           "@type": "Offer",
           "price": "0",
           "priceCurrency": "USD"
-        }
+        },
+        "featureList": [
+          "Score tracking",
+          "Skunk detection (11-0)",
+          "Voice announcer",
+          "Match history",
+          "Offline support",
+          "1v1 and 2v2 modes"
+        ]
       }
     </script>
 
-    <title>Hole Shot | Ultimate Backyard Scoring</title>
+    <title>Hole Shot — Free Cornhole Scoring App | Track Scores & Share Results</title>
   </head>
-  <body class="bg-[#09090b] text-zinc-100 overflow-x-hidden selection:bg-orange-500/30">
+  <body>
     <!-- Skip to content for keyboard/screen-reader users -->
     <a
       href="#main-content"
-      class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-xl focus:bg-orange-500 focus:px-4 focus:py-2 focus:font-bold focus:text-white"
+      class="sr-only focus:not-sr-only"
+      style="z-index:9999;background:var(--color-team-a,#f97316);color:#fff;border-radius:8px;font-weight:700"
     >
       Skip to main content
     </a>
     <div id="root"></div>
+    <noscript>
+      <div style="padding:2rem;text-align:center;font-family:system-ui;color:#fff;background:#0a0a0c;min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column">
+        <h1 style="font-size:2rem;margin-bottom:1rem">Hole Shot</h1>
+        <p>Please enable JavaScript to use this cornhole scoring app.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

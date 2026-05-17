@@ -9,25 +9,27 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Only include assets that actually exist in /public
       includeAssets: ['favicon.png', 'icons/icon-192.png', 'icons/icon-512.png'],
       workbox: {
-        // Precache all JS, CSS, HTML, and key image types
-        globPatterns: ['**/*.{js,css,html,ico,png}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Clean old caches on update
+        cleanupOutdatedCaches: true,
+        // Don't cache external resources
+        navigateFallback: 'index.html',
+        runtimeCaching: [],
       },
       manifest: {
-        name: 'Hole Shot - Backyard Glory',
+        name: 'Hole Shot — Cornhole Scorer',
         short_name: 'Hole Shot',
-        description: 'The ultimate backyard cornhole scoring app. Track scores, customize point values, and crown your backyard champion.',
-        theme_color: '#f97316',
-        background_color: '#09090b',
+        description: 'Free cornhole scoring app with voice announcer, skunk detection, match history, and offline support.',
+        theme_color: '#0a0a0c',
+        background_color: '#0a0a0c',
         display: 'standalone',
         orientation: 'portrait',
-        // Must match the GitHub Pages base path exactly
         start_url: '/Hole-Shot/',
         scope: '/Hole-Shot/',
         lang: 'en',
-        categories: ['sports', 'games'],
+        categories: ['sports', 'games', 'utilities'],
         icons: [
           {
             src: '/Hole-Shot/icons/icon-192.png',
@@ -47,20 +49,25 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'maskable'
           }
+        ],
+        shortcuts: [
+          {
+            name: 'New Game',
+            short_name: 'New',
+            url: '/Hole-Shot/',
+            description: 'Start a new cornhole match'
+          }
         ]
       }
     })
   ],
   base: '/Hole-Shot/',
   build: {
-    // Target modern browsers for smaller output
     target: 'es2020',
-    // Optimize chunk splitting for better caching
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          motion: ['framer-motion'],
           db: ['dexie']
         }
       }

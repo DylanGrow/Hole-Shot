@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { db, Player } from '../db/database'
-import { motion, AnimatePresence } from 'framer-motion'
 
 interface Props {
   isOpen: boolean
@@ -11,7 +10,7 @@ interface Props {
   is2v2: boolean
 }
 
-const AVATARS = ['🏃', '🕶️', '🔥', '🎯', '🤠', '🤘', '🍕', '🍺', '🏆', '🧢', '👕', '🕶️', '⭐', '💀']
+const AVATARS = ['🏃', '🕶️', '🔥', '🎯', '🤠', '🤘', '🍕', '🍺', '🏆', '🧢', '👕', '⭐', '💀', '🎱']
 
 export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, is2v2 }: Props) {
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
@@ -20,6 +19,8 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
   const [newPlayerName, setNewPlayerName] = useState('')
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0])
   const [search, setSearch] = useState('')
+  const [isClosing, setIsClosing] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -27,14 +28,25 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
       setAllPlayers(players.sort((a, b) => a.name.localeCompare(b.name)))
     }
     if (isOpen) {
+      setIsClosing(false)
       loadData()
       const limit = is2v2 ? 2 : 1
       const cleanA = teamAName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B').slice(0, limit)
       const cleanB = teamBName.split(' & ').filter(n => n && n !== 'Team A' && n !== 'Team B').slice(0, limit)
       setTeamA(cleanA)
       setTeamB(cleanB)
+      // Focus the name input when opened
+      setTimeout(() => inputRef.current?.focus(), 300)
     }
   }, [isOpen, teamAName, teamBName, is2v2])
+
+  const handleClose = () => {
+    setIsClosing(true)
+    setTimeout(() => {
+      onClose()
+      setIsClosing(false)
+    }, 250)
+  }
 
   const clearAll = () => {
     setTeamA([])
@@ -60,193 +72,250 @@ export function PlayerPicker({ isOpen, onClose, onSelect, teamAName, teamBName, 
     setNewPlayerName('')
   }
 
+  const deletePlayer = async (player: Player) => {
+    if (!confirm(`Remove ${player.name} from saved players?`)) return
+    if (player.id) {
+      await db.players.delete(player.id)
+      const players = await db.players.toArray()
+      setAllPlayers(players.sort((a, b) => a.name.localeCompare(b.name)))
+      // Also remove from current teams
+      setTeamA(prev => prev.filter(n => n !== player.name))
+      setTeamB(prev => prev.filter(n => n !== player.name))
+    }
+  }
+
   const addPlayerToTeam = (name: string) => {
     const limit = is2v2 ? 2 : 1
     if (teamA.includes(name) || teamB.includes(name)) return
 
     if (teamA.length < limit) {
-      setTeamA([...teamA, name])
+      setTeamA(prev => [...prev, name])
     } else if (teamB.length < limit) {
-      setTeamB([...teamB, name])
+      setTeamB(prev => [...prev, name])
     }
   }
 
   const movePlayer = (name: string, from: 'A' | 'B') => {
     const limit = is2v2 ? 2 : 1
     if (from === 'A') {
-      setTeamA(teamA.filter(n => n !== name))
-      if (teamB.length < limit) setTeamB([...teamB, name])
+      setTeamA(prev => prev.filter(n => n !== name))
+      if (teamB.length < limit) setTeamB(prev => [...prev, name])
     } else {
-      setTeamB(teamB.filter(n => n !== name))
-      if (teamA.length < limit) setTeamA([...teamA, name])
+      setTeamB(prev => prev.filter(n => n !== name))
+      if (teamA.length < limit) setTeamA(prev => [...prev, name])
     }
   }
 
   const removePlayer = (name: string, team: 'A' | 'B') => {
-    if (team === 'A') setTeamA(teamA.filter(n => n !== name))
-    else setTeamB(teamB.filter(n => n !== name))
+    if (team === 'A') setTeamA(prev => prev.filter(n => n !== name))
+    else setTeamB(prev => prev.filter(n => n !== name))
   }
 
   const handleConfirm = () => {
     onSelect('A', teamA.length > 0 ? teamA.join(' & ') : 'Team A')
     onSelect('B', teamB.length > 0 ? teamB.join(' & ') : 'Team B')
-    onClose()
+    handleClose()
   }
 
-  const filteredPlayers = allPlayers.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) && 
-    !teamA.map(n => n.toLowerCase()).includes(p.name.toLowerCase()) && 
+  const filteredPlayers = allPlayers.filter(p =>
+    p.name.toLowerCase().includes(search.toLowerCase()) &&
+    !teamA.map(n => n.toLowerCase()).includes(p.name.toLowerCase()) &&
     !teamB.map(n => n.toLowerCase()).includes(p.name.toLowerCase())
   )
 
+  if (!isOpen && !isClosing) return null
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/95 p-0 sm:p-4 backdrop-blur-2xl"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="w-full max-w-2xl overflow-hidden rounded-t-[40px] sm:rounded-[40px] border-t border-white/10 bg-zinc-950/50 p-6 sm:p-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-black text-white tracking-tight">Select Players</h2>
-                <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mt-1">
-                  {teamA.length + teamB.length} / {is2v2 ? 4 : 2} SELECTED
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={clearAll} className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors">
-                  Clear All 🗑️
-                </button>
-                <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-500">✕</button>
-              </div>
-            </div>
-
-            {/* Current Teams View */}
-            <div className="mb-8 grid grid-cols-2 gap-4">
-              <div className="rounded-3xl bg-orange-500/5 border border-orange-500/20 p-4">
-                <div className="mb-3 text-[10px] font-black uppercase tracking-widest text-orange-500/60">Team A</div>
-                <div className="space-y-2 min-h-[80px]">
-                  {teamA.map(name => (
-                    <motion.div layoutId={name} key={name} className="flex items-center justify-between rounded-xl bg-orange-500/10 p-2 border border-orange-500/20">
-                      <span className="text-sm font-bold text-white flex items-center gap-2">
-                        <span>{allPlayers.find(p => p.name === name)?.avatar || '👤'}</span>
-                        {name}
-                      </span>
-                      <div className="flex gap-1">
-                        <button onClick={() => movePlayer(name, 'A')} className="h-6 w-6 rounded-lg bg-white/5 text-[10px] text-zinc-400 hover:text-white">⇄</button>
-                        <button onClick={() => removePlayer(name, 'A')} className="h-6 w-6 rounded-lg bg-red-500/10 text-[10px] text-red-500">✕</button>
-                      </div>
-                    </motion.div>
-                  ))}
-                  {teamA.length === 0 && <div className="text-[10px] text-zinc-700 italic py-4 text-center">Empty</div>}
-                </div>
-              </div>
-
-              <div className="rounded-3xl bg-red-500/5 border border-red-500/20 p-4">
-                <div className="mb-3 text-[10px] font-black uppercase tracking-widest text-red-500/60">Team B</div>
-                <div className="space-y-2 min-h-[80px]">
-                  {teamB.map(name => (
-                    <motion.div layoutId={name} key={name} className="flex items-center justify-between rounded-xl bg-red-500/10 p-2 border border-red-500/20">
-                      <span className="text-sm font-bold text-white flex items-center gap-2">
-                        <span>{allPlayers.find(p => p.name === name)?.avatar || '👤'}</span>
-                        {name}
-                      </span>
-                      <div className="flex gap-1">
-                        <button onClick={() => movePlayer(name, 'B')} className="h-6 w-6 rounded-lg bg-white/5 text-[10px] text-zinc-400 hover:text-white">⇄</button>
-                        <button onClick={() => removePlayer(name, 'B')} className="h-6 w-6 rounded-lg bg-red-500/10 text-[10px] text-red-500">✕</button>
-                      </div>
-                    </motion.div>
-                  ))}
-                  {teamB.length === 0 && <div className="text-[10px] text-zinc-700 italic py-4 text-center">Empty</div>}
-                </div>
-              </div>
-            </div>
-
-            {/* Add New Player Section */}
-            <section className="mb-8 rounded-3xl bg-white/5 p-6 border border-white/10">
-              <div className="mb-4">
-                <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-zinc-500">Create New Player</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newPlayerName}
-                    onChange={(e) => setNewPlayerName(e.target.value)}
-                    placeholder="Player name..."
-                    className="flex-1 rounded-2xl bg-zinc-900 border border-white/5 px-4 py-3 text-white focus:outline-none focus:border-orange-500"
-                    onKeyDown={(e) => e.key === 'Enter' && createPlayer()}
-                  />
-                  <button 
-                    onClick={createPlayer} 
-                    disabled={(teamA.length + teamB.length) >= (is2v2 ? 4 : 2)}
-                    className="rounded-2xl bg-orange-500 px-6 font-bold text-white disabled:opacity-30 disabled:grayscale transition-all"
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-              
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {AVATARS.map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => setSelectedAvatar(emoji)}
-                    className={`flex-shrink-0 h-10 w-10 rounded-xl text-xl flex items-center justify-center transition-all ${
-                      selectedAvatar === emoji ? 'bg-orange-500 scale-110 shadow-lg' : 'bg-white/5 grayscale hover:grayscale-0'
-                    }`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Quick Select Section */}
-            <section className="mb-8">
-              <div className="mb-4 flex items-center justify-between">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Quick Select ({allPlayers.length})</label>
-                <input 
-                  type="text" 
-                  placeholder="Search..." 
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-transparent text-xs text-white focus:outline-none border-b border-white/10 pb-1"
-                />
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
-                {filteredPlayers.map(player => (
-                  <button
-                    key={player.id}
-                    onClick={() => addPlayerToTeam(player.name)}
-                    className="flex items-center gap-2 rounded-xl bg-white/5 p-2 text-xs font-bold text-zinc-400 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10"
-                  >
-                    <span className="text-base">{player.avatar}</span>
-                    <span className="truncate">{player.name}</span>
-                  </button>
-                ))}
-                {filteredPlayers.length === 0 && <div className="col-span-full py-4 text-center text-[10px] text-zinc-600 italic">No matches found</div>}
-              </div>
-            </section>
-
+    <div
+      className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 ${
+        isClosing ? 'animate-fade-out' : 'animate-fade-in'
+      }`}
+      style={{ background: 'rgba(0, 0, 0, 0.92)' }}
+      onClick={handleClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Select Players"
+    >
+      <div
+        className={`w-full max-w-2xl overflow-hidden rounded-t-3xl sm:rounded-3xl border border-[var(--color-border)] p-5 sm:p-8 max-h-[90vh] overflow-y-auto ${
+          isClosing ? '' : 'animate-slide-up'
+        }`}
+        style={{ background: 'var(--color-surface)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-white tracking-tight">Select Players</h2>
+            <p className="text-xs font-bold text-[var(--color-text-muted)] mt-1">
+              {teamA.length + teamB.length} / {is2v2 ? 4 : 2} selected
+            </p>
+          </div>
+          <div className="flex gap-2">
             <button
-              onClick={handleConfirm}
-              className="w-full rounded-2xl bg-gradient-to-r from-green-600 to-green-500 py-4 text-lg font-black text-white shadow-xl shadow-green-600/20 active:scale-[0.98] transition-all"
+              onClick={clearAll}
+              className="btn btn-ghost text-xs text-red-400"
+              aria-label="Clear all players"
             >
-              Update Teams & Continue
+              Clear
             </button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            <button
+              onClick={handleClose}
+              className="h-10 w-10 rounded-full flex items-center justify-center text-[var(--color-text-dim)] hover:text-white transition-colors"
+              style={{ background: 'var(--color-surface-2)' }}
+              aria-label="Close player picker"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Current Teams View */}
+        <div className="mb-6 grid grid-cols-2 gap-3">
+          {/* Team A */}
+          <div className="rounded-2xl p-3" style={{ background: 'var(--color-team-a-bg)', border: '1px solid var(--color-team-a-border)' }}>
+            <div className="mb-2 text-xs font-black uppercase tracking-wider" style={{ color: 'var(--color-team-a)' }}>Team A</div>
+            <div className="space-y-2 min-h-[60px]">
+              {teamA.map(name => (
+                <div key={name} className="flex items-center justify-between rounded-xl p-2" style={{ background: 'rgba(249, 115, 22, 0.08)', border: '1px solid var(--color-team-a-border)' }}>
+                  <span className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>{allPlayers.find(p => p.name === name)?.avatar || '👤'}</span>
+                    <span className="truncate max-w-[80px]">{name}</span>
+                  </span>
+                  <div className="flex gap-1">
+                    <button onClick={() => movePlayer(name, 'A')} className="h-7 w-7 rounded-lg text-xs" style={{ background: 'var(--color-surface-2)' }} aria-label={`Move ${name} to Team B`}>⇄</button>
+                    <button onClick={() => removePlayer(name, 'A')} className="h-7 w-7 rounded-lg text-xs text-red-400" style={{ background: 'rgba(239, 68, 68, 0.1)' }} aria-label={`Remove ${name} from Team A`}>✕</button>
+                  </div>
+                </div>
+              ))}
+              {teamA.length === 0 && <div className="text-xs italic py-3 text-center" style={{ color: 'var(--color-text-muted)' }}>Empty</div>}
+            </div>
+          </div>
+
+          {/* Team B */}
+          <div className="rounded-2xl p-3" style={{ background: 'var(--color-team-b-bg)', border: '1px solid var(--color-team-b-border)' }}>
+            <div className="mb-2 text-xs font-black uppercase tracking-wider" style={{ color: 'var(--color-team-b)' }}>Team B</div>
+            <div className="space-y-2 min-h-[60px]">
+              {teamB.map(name => (
+                <div key={name} className="flex items-center justify-between rounded-xl p-2" style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid var(--color-team-b-border)' }}>
+                  <span className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>{allPlayers.find(p => p.name === name)?.avatar || '👤'}</span>
+                    <span className="truncate max-w-[80px]">{name}</span>
+                  </span>
+                  <div className="flex gap-1">
+                    <button onClick={() => movePlayer(name, 'B')} className="h-7 w-7 rounded-lg text-xs" style={{ background: 'var(--color-surface-2)' }} aria-label={`Move ${name} to Team A`}>⇄</button>
+                    <button onClick={() => removePlayer(name, 'B')} className="h-7 w-7 rounded-lg text-xs text-red-400" style={{ background: 'rgba(239, 68, 68, 0.1)' }} aria-label={`Remove ${name} from Team B`}>✕</button>
+                  </div>
+                </div>
+              ))}
+              {teamB.length === 0 && <div className="text-xs italic py-3 text-center" style={{ color: 'var(--color-text-muted)' }}>Empty</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* Add New Player */}
+        <section className="mb-6 rounded-2xl p-4" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
+          <label htmlFor="new-player-name" className="mb-2 block text-xs font-black uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+            Create New Player
+          </label>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              id="new-player-name"
+              type="text"
+              value={newPlayerName}
+              onChange={(e) => setNewPlayerName(e.target.value)}
+              placeholder="Player name..."
+              className="flex-1 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-team-a)]"
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+              onKeyDown={(e) => e.key === 'Enter' && createPlayer()}
+              autoComplete="off"
+            />
+            <button
+              onClick={createPlayer}
+              disabled={(teamA.length + teamB.length) >= (is2v2 ? 4 : 2)}
+              className="btn btn-primary rounded-xl px-5 disabled:opacity-30"
+              aria-label="Add new player"
+            >
+              Add
+            </button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-2 mt-3" role="radiogroup" aria-label="Select avatar">
+            {AVATARS.map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => setSelectedAvatar(emoji)}
+                role="radio"
+                aria-checked={selectedAvatar === emoji}
+                aria-label={`Avatar ${emoji}`}
+                className="flex-shrink-0 h-10 w-10 rounded-xl text-xl flex items-center justify-center transition-all"
+                style={{
+                  background: selectedAvatar === emoji ? 'var(--color-team-a)' : 'var(--color-surface)',
+                  transform: selectedAvatar === emoji ? 'scale(1.1)' : 'scale(1)',
+                  border: selectedAvatar === emoji ? 'none' : '1px solid var(--color-border)',
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Quick Select */}
+        <section className="mb-6">
+          <div className="mb-3 flex items-center justify-between">
+            <label htmlFor="player-search" className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+              Saved Players ({allPlayers.length})
+            </label>
+            <input
+              id="player-search"
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="text-xs text-white focus:outline-none pb-1"
+              style={{ background: 'transparent', borderBottom: '1px solid var(--color-border)' }}
+            />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[140px] overflow-y-auto pr-1">
+            {filteredPlayers.map(player => (
+              <div key={player.id} className="flex items-center gap-1">
+                <button
+                  onClick={() => addPlayerToTeam(player.name)}
+                  className="flex-1 flex items-center gap-2 rounded-xl p-2 text-xs font-bold transition-colors"
+                  style={{ background: 'var(--color-surface-2)', color: 'var(--color-text-dim)', border: '1px solid transparent' }}
+                  aria-label={`Add ${player.name} to a team`}
+                >
+                  <span className="text-base">{player.avatar}</span>
+                  <span className="truncate">{player.name}</span>
+                </button>
+                <button
+                  onClick={() => deletePlayer(player)}
+                  className="h-8 w-8 rounded-lg text-xs text-red-400 flex-shrink-0 hover:text-red-300"
+                  style={{ background: 'rgba(239, 68, 68, 0.08)' }}
+                  aria-label={`Delete ${player.name}`}
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
+            {filteredPlayers.length === 0 && (
+              <div className="col-span-full py-3 text-center text-xs italic" style={{ color: 'var(--color-text-muted)' }}>
+                No players found
+              </div>
+            )}
+          </div>
+        </section>
+
+        <button
+          onClick={handleConfirm}
+          className="btn w-full rounded-2xl py-4 text-lg font-black text-white transition-all active:scale-[0.98]"
+          style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', boxShadow: '0 8px 24px rgba(34, 197, 94, 0.25)' }}
+        >
+          Update Teams & Continue
+        </button>
+      </div>
+    </div>
   )
 }
